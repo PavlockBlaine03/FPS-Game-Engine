@@ -43,6 +43,7 @@ Application::Application(const int width, const int height, const std::string& t
     , m_textRenderer(std::make_unique<TextRenderer>(FONT_PATH, FONT_SIZE))
     , m_scene(std::make_unique<Scene>())
     , m_pistol(std::make_unique<Pistol>())
+    , m_hand(std::make_unique<Hand>())
     , m_physics(std::make_unique<PhysicsWorld>())
     , m_projectiles(std::make_unique<ProjectileManager>())
     , m_particles(std::make_unique<ParticleSystem>())
@@ -154,8 +155,9 @@ void Application::processInput()
 
     m_camera->processMouseMovement(m_input->mouseDeltaX(), m_input->mouseDeltaY());
     m_input->resetMouseDelta();
-
     m_pistol->debugAdjust(*m_input, m_time.deltaTime());
+    m_pistol->update(m_time.deltaTime());
+    m_hand->debugAdjust(*m_input, m_time.deltaTime());
 
     // Fire on a fresh left-click (not held) -- spawns both a projectile and
     // a muzzle-flash particle burst at the pistol's muzzle.
@@ -167,6 +169,7 @@ void Application::processInput()
         m_projectiles->spawn(muzzlePosition, fireDirection);
         m_particles->spawnBurst(muzzlePosition, fireDirection);
         m_audio->play("assets/audio/weapons/pistol-shot.wav");
+        m_pistol->triggerRecoil();
     }
 
     // Interact with the door on a fresh 'E' press, only if the player is
@@ -201,6 +204,7 @@ void Application::render() const
     // preventing it from clipping into walls/floor when the camera gets close.
     glClear(GL_DEPTH_BUFFER_BIT);
     m_pistol->render(*m_renderer, *m_shader, *m_camera, m_light);
+    m_hand->render(*m_renderer, *m_shader, *m_camera, m_light, *m_pistol);
 
     const glm::vec3& pos = m_camera->position();
 

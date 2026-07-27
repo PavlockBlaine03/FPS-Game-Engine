@@ -15,6 +15,7 @@
 #include "scene/ProjectileManager.h"
 #include "scene/Entity/Weapons/Pistol.h"
 #include "scene/Entity/Objects/Door.h"
+#include "scene/Entity/Player/Hand.h"
 
 #include <memory>
 
@@ -47,6 +48,7 @@ private:
 	std::unique_ptr<ParticleSystem> m_particles;
 	std::unique_ptr<Door> m_door;
 	std::unique_ptr<AudioEngine> m_audio;
+	std::unique_ptr<Hand> m_hand;
 
 	Light m_light;
 

@@ -68,7 +68,8 @@ add_executable(FPSGame
     src/scene/ParticleSystem.cpp
     src/audio/AudioEngine.h
     src/audio/AudioEngine.cpp
-)
+    src/scene/Entity/Player/Hand.h
+    src/scene/Entity/Player/Hand.cpp)
 
 target_include_directories(FPSGame
     PRIVATE

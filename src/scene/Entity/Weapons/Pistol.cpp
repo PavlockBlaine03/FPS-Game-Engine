@@ -24,22 +24,6 @@ Pistol::Pistol()
 
 Pistol::~Pistol() = default;
 
-void Pistol::render(
-    const Renderer& renderer,
-    const Shader& shader,
-    const Camera& camera,
-    const Light& light) const
-{
-    const glm::mat4 cameraLocal = glm::inverse(camera.viewMatrix());
-
-    glm::mat4 model = cameraLocal;
-    model = glm::translate(model, m_viewOffset);
-    model = glm::rotate(model, glm::radians(m_viewRotationDegrees.y), glm::vec3(0.0F, 1.0F, 0.0F));
-    model = glm::rotate(model, glm::radians(m_viewRotationDegrees.x), glm::vec3(1.0F, 0.0F, 0.0F));
-    model = glm::scale(model, glm::vec3(m_viewScale));
-
-    m_model->render(renderer, shader, camera, model, light);
-}
 glm::vec3 Pistol::muzzleWorldPosition(const Camera& camera) const
 {
     const glm::mat4 cameraLocal = glm::inverse(camera.viewMatrix());
@@ -89,4 +73,52 @@ void Pistol::debugAdjust(const InputManager& input, const float deltaTime)
                    << m_viewRotationDegrees.y << ")\n" 
                    << "Position= " << m_viewOffset.x << ", " << m_viewOffset.y << "\n";
     }
+}
+void Pistol::triggerRecoil()
+{
+    // Kick backward/up; a critically-damped spring pulls it back to zero.
+    m_recoilOffset += glm::vec3(0.0F, 0.02F, 0.05F);
+}
+void Pistol::update(const float deltaTime)
+{
+    // Spring-damper settle for recoil.
+    constexpr float stiffness = 120.0F;
+    constexpr float damping = 14.0F;
+
+    const glm::vec3 acceleration = -stiffness * m_recoilOffset - damping * m_recoilVelocity;
+    m_recoilVelocity += acceleration * deltaTime;
+    m_recoilOffset += m_recoilVelocity * deltaTime;
+
+    /*if (m_isReloading)
+    {
+        m_reloadProgress += deltaTime / RELOAD_DURATION;
+        if (m_reloadProgress >= 1.0F)
+        {
+            m_isReloading = false;
+            m_reloadProgress = -1.0F;
+        }
+    }*/
+}
+glm::mat4 Pistol::viewTransform(const Camera& camera) const
+{
+    const glm::mat4 cameraLocal = glm::inverse(camera.viewMatrix());
+
+    glm::mat4 model = cameraLocal;
+    model = glm::translate(model, m_viewOffset + m_recoilOffset /* + reloadOffset(...) */);
+    model = glm::rotate(model, glm::radians(m_viewRotationDegrees.y), glm::vec3(0.0F, 1.0F, 0.0F));
+    model = glm::rotate(model, glm::radians(m_viewRotationDegrees.x + m_recoilOffset.y * 200.0F), glm::vec3(1.0F, 0.0F, 0.0F));
+
+    return model;
+}
+
+void Pistol::render(
+    const Renderer& renderer,
+    const Shader& shader,
+    const Camera& camera,
+    const Light& light) const
+{
+    glm::mat4 model = viewTransform(camera);
+    model = glm::scale(model, glm::vec3(m_viewScale));
+
+    m_model->render(renderer, shader, camera, model, light);
 }
