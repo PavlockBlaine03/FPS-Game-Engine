@@ -1,0 +1,17 @@
+{
+  "name": "fps-game",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "glfw3",
+    "glm",
+    "freetype",
+    "stb",
+    "assimp",
+    {
+      "name": "glad",
+      "features": [
+        "gl-api-33"
+      ]
+    }
+  ]
+}
