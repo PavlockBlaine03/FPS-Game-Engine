@@ -1,5 +1,6 @@
 #pragma once
 
+#include "audio/AudioEngine.h"
 #include "core/Window.h"
 #include "core/Time.h"
 #include "input/InputManager.h"
@@ -45,6 +46,7 @@ private:
 	std::unique_ptr<ProjectileManager> m_projectiles;
 	std::unique_ptr<ParticleSystem> m_particles;
 	std::unique_ptr<Door> m_door;
+	std::unique_ptr<AudioEngine> m_audio;
 
 	Light m_light;
 

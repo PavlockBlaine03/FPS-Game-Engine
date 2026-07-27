@@ -66,6 +66,8 @@ add_executable(FPSGame
     src/scene/Entity/Objects/Door.cpp
     src/scene/ParticleSystem.h
     src/scene/ParticleSystem.cpp
+    src/audio/AudioEngine.h
+    src/audio/AudioEngine.cpp
 )
 
 target_include_directories(FPSGame

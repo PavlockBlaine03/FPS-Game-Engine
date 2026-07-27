@@ -33,6 +33,7 @@ namespace
 Application::Application(const int width, const int height, const std::string& title)
     : m_window(std::make_unique<Window>(width, height, title))
     , m_input(std::make_unique<InputManager>(m_window->handle()))
+    , m_audio(std::make_unique<AudioEngine>())
     , m_shader(std::make_unique<Shader>(
         Shader::fromFiles(BASIC_VERTEX_SHADER_PATH, BASIC_FRAGMENT_SHADER_PATH)))
     , m_textShader(std::make_unique<Shader>(
@@ -165,6 +166,7 @@ void Application::processInput()
 
         m_projectiles->spawn(muzzlePosition, fireDirection);
         m_particles->spawnBurst(muzzlePosition, fireDirection);
+        m_audio->play("assets/audio/weapons/pistol-shot.wav");
     }
 
     // Interact with the door on a fresh 'E' press, only if the player is
