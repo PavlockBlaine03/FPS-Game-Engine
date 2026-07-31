@@ -6,11 +6,56 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace
 {
     constexpr glm::vec3 BULLET_COLOR(1.0F, 1.0F, 1.0F);
     constexpr glm::vec3 BULLET_HALF_EXTENTS(0.02F, 0.02F, 0.08F); // thin, elongated along travel direction
+
+    // Return the point at which a moving bullet first enters an AABB. Testing
+    // the segment itself prevents tunnelling without inflating the collision
+    // area beyond the visible edges of the wall.
+    bool segmentIntersectsAABB(
+        const glm::vec3& start,
+        const glm::vec3& end,
+        const AABB& box,
+        float& hitTime)
+    {
+        const glm::vec3 delta = end - start;
+        float entryTime = 0.0F;
+        float exitTime = 1.0F;
+
+        for (int axis = 0; axis < 3; ++axis)
+        {
+            if (std::abs(delta[axis]) <= std::numeric_limits<float>::epsilon())
+            {
+                if (start[axis] < box.min[axis] || start[axis] > box.max[axis])
+                {
+                    return false;
+                }
+                continue;
+            }
+
+            const float inverseDelta = 1.0F / delta[axis];
+            float axisEntry = (box.min[axis] - start[axis]) * inverseDelta;
+            float axisExit = (box.max[axis] - start[axis]) * inverseDelta;
+            if (axisEntry > axisExit)
+            {
+                std::swap(axisEntry, axisExit);
+            }
+
+            entryTime = std::max(entryTime, axisEntry);
+            exitTime = std::min(exitTime, axisExit);
+            if (entryTime > exitTime)
+            {
+                return false;
+            }
+        }
+
+        hitTime = entryTime;
+        return true;
+    }
 }
 
 ProjectileManager::ProjectileManager()
@@ -54,22 +99,17 @@ void ProjectileManager::update(
         const glm::vec3 previousPosition = bullet.position;
         const glm::vec3 nextPosition = previousPosition + bullet.direction * step;
 
-        // Build a small AABB around the bullet's swept segment rather than
-        // just testing the endpoint -- fast bullets can otherwise tunnel
-        // through thin walls within a single frame if only the final point
-        // is checked.
-        const glm::vec3 segmentMin = glm::min(previousPosition, nextPosition) - glm::vec3(0.05F);
-        const glm::vec3 segmentMax = glm::max(previousPosition, nextPosition) + glm::vec3(0.05F);
-        const AABB sweptBox{ segmentMin, segmentMax };
-
         bool hit = false;
+        float earliestHitTime = 1.0F;
 
         for (const AABB& collider : colliders)
         {
-            if (sweptBox.intersects(collider))
+            float hitTime = 0.0F;
+            if (segmentIntersectsAABB(previousPosition, nextPosition, collider, hitTime)
+                && hitTime <= earliestHitTime)
             {
                 hit = true;
-                break;
+                earliestHitTime = hitTime;
             }
         }
 
@@ -77,7 +117,9 @@ void ProjectileManager::update(
 
         if (hit)
         {
-            particles.spawnBurst(nextPosition, -bullet.direction);
+            const glm::vec3 hitPosition = previousPosition
+                + (nextPosition - previousPosition) * earliestHitTime;
+            particles.spawnBurst(hitPosition, -bullet.direction);
             bullet.alive = false;
         }
         else if (bullet.distanceTraveled >= bullet.maxDistance)
