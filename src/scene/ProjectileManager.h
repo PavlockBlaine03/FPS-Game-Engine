@@ -23,7 +23,11 @@ public:
     ProjectileManager(const ProjectileManager&) = delete;
     ProjectileManager& operator=(const ProjectileManager&) = delete;
 
-    void spawn(const glm::vec3& origin, const glm::vec3& direction);
+    void spawnAimed(
+        const glm::vec3& origin,
+        const glm::vec3& cameraPosition,
+        const glm::vec3& cameraDirection,
+        const std::vector<AABB>& colliders);
 
     // colliders: world geometry to test bullets against; particles: used to
     // spawn an impact burst wherever a bullet hits something.

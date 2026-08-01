@@ -161,3 +161,27 @@ void TextRenderer::renderText(
     glBindVertexArray(0);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+void TextRenderer::renderCrosshair(
+    const Shader& shader,
+    const int screenWidth,
+    const int screenHeight,
+    const float scale,
+    const glm::vec3& color) const
+{
+    const Character& crosshair = m_characters[static_cast<unsigned char>('+')];
+    const float centerX = static_cast<float>(screenWidth) * 0.5F;
+    const float centerY = static_cast<float>(screenHeight) * 0.5F;
+
+    // renderText positions glyphs from their baseline. Account for the
+    // glyph's bearing and bitmap dimensions so the visible '+' itself is
+    // centered on the aiming point.
+    const float x = centerX
+        - (static_cast<float>(crosshair.size.x) * scale * 0.5F)
+        - (static_cast<float>(crosshair.bearing.x) * scale);
+    const float y = centerY
+        + (static_cast<float>(crosshair.size.y) * scale * 0.5F)
+        - (static_cast<float>(crosshair.bearing.y) * scale);
+
+    renderText(shader, "+", x, y, scale, color);
+}
