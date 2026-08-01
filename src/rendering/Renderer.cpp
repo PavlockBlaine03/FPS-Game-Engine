@@ -1,4 +1,5 @@
 #include "rendering/Renderer.h"
+#include "rendering/SkinnedMesh.h"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_inverse.hpp>
 
@@ -55,4 +56,33 @@ void Renderer::resize(const int width, const int height)
 {
     m_width = width;
     m_height = height;
+}
+
+void Renderer::drawSkinned(
+    const SkinnedMesh& mesh,
+    const Shader& shader,
+    const Camera& camera,
+    const glm::mat4& model,
+    const Texture& texture,
+    const Light& light,
+    const std::vector<glm::mat4>& boneMatrices) const
+{
+    shader.use();
+    const float aspectRatio = static_cast<float>(m_width) / static_cast<float>(m_height);
+    shader.setMat4("view", camera.viewMatrix());
+    shader.setMat4("projection", camera.projectionMatrix(aspectRatio));
+    shader.setMat4("model", model);
+    shader.setMat3("normalMatrix", glm::inverseTranspose(glm::mat3(model)));
+    shader.setVec3("lightPosition", light.position);
+    shader.setVec3("lightColor", light.color);
+    shader.setVec3("viewPosition", camera.position());
+    shader.setFloat("ambientStrength", light.ambientStrength);
+    shader.setFloat("specularStrength", light.specularStrength);
+    shader.setFloat("shininess", light.shininess);
+    shader.setInt("diffuseTexture", 0);
+    shader.setInt("boneMatrices", 1);
+
+    texture.bind(0);
+    mesh.uploadBoneMatrices(boneMatrices);
+    mesh.draw();
 }

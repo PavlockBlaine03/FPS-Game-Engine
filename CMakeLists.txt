@@ -39,6 +39,10 @@ add_executable(FPSGame
     src/rendering/Texture.cpp
     src/rendering/Model.h
     src/rendering/Model.cpp
+    src/rendering/SkinnedMesh.h
+    src/rendering/SkinnedMesh.cpp
+    src/rendering/SkeletalModel.h
+    src/rendering/SkeletalModel.cpp
     src/input/InputManager.h
     src/input/InputManager.cpp
     src/util/FileUtils.h
@@ -47,10 +51,16 @@ add_executable(FPSGame
     src/util/MeshFactory.cpp
     src/util/ModelLoader.h
     src/util/ModelLoader.cpp
+    src/util/SkeletalModelLoader.h
+    src/util/SkeletalModelLoader.cpp
     src/scene/Scene.h
     src/scene/Scene.cpp
     src/scene/Entity/Entity.h
     src/scene/Entity/Entity.cpp
+    src/scene/Animation/Animator.h
+    src/scene/Animation/Animator.cpp
+    src/scene/Entity/Characters/Person.h
+    src/scene/Entity/Characters/Person.cpp
     src/scene/Entity/Weapons/Weapon.h
     src/scene/Entity/Weapons/Weapon.cpp
     src/scene/Entity/Weapons/Pistol.h

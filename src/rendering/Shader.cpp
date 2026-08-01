@@ -94,6 +94,12 @@ void Shader::setFloat(const std::string& name, const float value) const
     glUniform1f(location, value);
 }
 
+void Shader::setInt(const std::string& name, const int value) const
+{
+    const int location = glGetUniformLocation(m_programId, name.c_str());
+    glUniform1i(location, value);
+}
+
 unsigned int Shader::compile(const unsigned int shaderType, const char* source)
 {
     const unsigned int shader = glCreateShader(shaderType);
