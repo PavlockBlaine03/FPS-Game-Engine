@@ -23,6 +23,13 @@ public:
 		float scale,
 		const glm::vec3& color) const;
 
+	void renderCrosshair(
+		const Shader& shader,
+		int screenWidth,
+		int screenHeight,
+		float scale,
+		const glm::vec3& color) const;
+
 private:
 	struct Character
 	{

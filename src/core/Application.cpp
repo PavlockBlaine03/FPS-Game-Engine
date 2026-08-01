@@ -173,6 +173,12 @@ void Application::processInput()
         colliders.push_back(m_door->collider());
     }
 
+    if (m_person != nullptr)
+    {
+        m_person->update(m_time.deltaTime());
+        colliders.push_back(m_person->collider());
+    }
+
     m_physics->setColliders(colliders);
 
     // Physics simulates the body's center position; the camera is derived
@@ -194,7 +200,11 @@ void Application::processInput()
         const glm::vec3 muzzlePosition = m_pistol->muzzleWorldPosition(*m_camera);
         const glm::vec3 fireDirection = m_pistol->muzzleWorldDirection(*m_camera);
 
-        m_projectiles->spawn(muzzlePosition, fireDirection);
+        m_projectiles->spawnAimed(
+            muzzlePosition,
+            m_camera->position(),
+            fireDirection,
+            colliders);
         m_particles->spawnBurst(muzzlePosition, fireDirection);
         m_audio->play("assets/audio/weapons/pistol-shot.wav");
         m_pistol->triggerRecoil();
@@ -217,10 +227,6 @@ void Application::processInput()
 
     m_projectiles->update(m_time.deltaTime(), colliders, *m_particles);
     m_particles->update(m_time.deltaTime());
-    if (m_person != nullptr)
-    {
-        m_person->update(m_time.deltaTime());
-    }
 }
 
 void Application::render() const
@@ -257,6 +263,14 @@ void Application::render() const
         10.0F,
         static_cast<float>(m_height) - 80.0F,
         1.0F,
+        glm::vec3(1.0F, 1.0F, 1.0F)
+    );
+
+    m_textRenderer->renderCrosshair(
+        *m_textShader,
+        m_width,
+        m_height,
+        0.5F,
         glm::vec3(1.0F, 1.0F, 1.0F)
     );
 }

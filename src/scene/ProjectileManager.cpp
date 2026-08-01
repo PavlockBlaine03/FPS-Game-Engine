@@ -74,11 +74,34 @@ ProjectileManager::ProjectileManager()
 
 ProjectileManager::~ProjectileManager() = default;
 
-void ProjectileManager::spawn(const glm::vec3& origin, const glm::vec3& direction)
+void ProjectileManager::spawnAimed(
+    const glm::vec3& origin,
+    const glm::vec3& cameraPosition,
+    const glm::vec3& cameraDirection,
+    const std::vector<AABB>& colliders)
 {
+    const glm::vec3 normalizedCameraDirection = glm::normalize(cameraDirection);
+    const glm::vec3 cameraRayEnd = cameraPosition + normalizedCameraDirection * 50.0F;
+    float earliestHitTime = 1.0F;
+
+    // Find what the center-screen camera ray is aiming at. The visible
+    // projectile can then travel from the offset muzzle to that same point.
+    for (const AABB& collider : colliders)
+    {
+        float hitTime = 0.0F;
+        if (segmentIntersectsAABB(cameraPosition, cameraRayEnd, collider, hitTime)
+            && hitTime < earliestHitTime)
+        {
+            earliestHitTime = hitTime;
+        }
+    }
+
+    const glm::vec3 aimPoint = cameraPosition
+        + (cameraRayEnd - cameraPosition) * earliestHitTime;
+
     Bullet bullet;
     bullet.position = origin;
-    bullet.direction = glm::normalize(direction);
+    bullet.direction = glm::normalize(aimPoint - origin);
 
     m_bullets.push_back(bullet);
 }
