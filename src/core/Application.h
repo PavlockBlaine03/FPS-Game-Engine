@@ -52,7 +52,7 @@ private:
 	std::unique_ptr<AudioEngine> m_audio;
 	std::unique_ptr<Hand> m_hand;
 	std::shared_ptr<SkeletalModel> m_personModel;
-	std::unique_ptr<Person> m_person;
+	std::vector<std::unique_ptr<Person>> m_persons;
 
 	Light m_light;
 

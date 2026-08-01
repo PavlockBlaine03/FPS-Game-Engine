@@ -92,6 +92,20 @@ bool Animator::play(const std::string& clipName, const bool loop, const float bl
     return true;
 }
 
+void Animator::ignoreNodeAnimation(const std::string& nodeName)
+{
+    const auto& nodes = m_model.nodes();
+    for (std::size_t i = 0; i < nodes.size(); ++i)
+    {
+        if (nodes[i].name == nodeName)
+        {
+            m_ignoredAnimationNodes.insert(static_cast<int>(i));
+            evaluate();
+            return;
+        }
+    }
+}
+
 void Animator::advance(Playback& playback, const float deltaTime) const
 {
     if (playback.clip == nullptr) { return; }
@@ -126,10 +140,15 @@ void Animator::evaluate()
 
     for (std::size_t i = 0; i < nodes.size(); ++i)
     {
-        NodePose pose = sampleNode(nodes[i], m_current.clip, m_current.time, static_cast<int>(i));
+        const bool ignoreAnimation = m_ignoredAnimationNodes.contains(static_cast<int>(i));
+        NodePose pose = sampleNode(
+            nodes[i], ignoreAnimation ? nullptr : m_current.clip,
+            m_current.time, static_cast<int>(i));
         if (blend < 1.0F && m_previous.clip != nullptr)
         {
-            const NodePose oldPose = sampleNode(nodes[i], m_previous.clip, m_previous.time, static_cast<int>(i));
+            const NodePose oldPose = sampleNode(
+                nodes[i], ignoreAnimation ? nullptr : m_previous.clip,
+                m_previous.time, static_cast<int>(i));
             pose.translation = glm::mix(oldPose.translation, pose.translation, blend);
             pose.rotation = glm::normalize(glm::slerp(oldPose.rotation, pose.rotation, blend));
             pose.scale = glm::mix(oldPose.scale, pose.scale, blend);

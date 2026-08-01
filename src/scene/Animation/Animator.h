@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 class SkeletalModel;
@@ -14,6 +15,7 @@ public:
     explicit Animator(const SkeletalModel& model);
 
     bool play(const std::string& clipName, bool loop = true, float blendSeconds = 0.2F);
+    void ignoreNodeAnimation(const std::string& nodeName);
     void update(float deltaTime);
 
     [[nodiscard]] const std::vector<glm::mat4>& skinMatrices() const { return m_skinMatrices; }
@@ -37,4 +39,5 @@ private:
     float m_blendElapsed = 0.0F;
     std::vector<glm::mat4> m_globalPose;
     std::vector<glm::mat4> m_skinMatrices;
+    std::unordered_set<int> m_ignoredAnimationNodes;
 };
