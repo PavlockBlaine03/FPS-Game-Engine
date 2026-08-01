@@ -363,8 +363,7 @@ SkeletalModelData SkeletalModelLoader::load(const std::string& path)
         path,
         aiProcess_Triangulate |
         aiProcess_GenSmoothNormals |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_ValidateDataStructure);
+        aiProcess_JoinIdenticalVertices);
 
     if (scene == nullptr || scene->mRootNode == nullptr
         || (scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) != 0)

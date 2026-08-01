@@ -91,10 +91,13 @@ Application::Application(const int width, const int height, const std::string& t
         try
         {
             m_personModel = std::make_shared<SkeletalModel>(PERSON_MODEL_PATH);
-            m_person = std::make_unique<Person>(
-                m_personModel,
-                glm::vec3(-2.0F, Scene::FLOOR_TOP_Y, -2.0F),
-                glm::vec3(-2.0F, Scene::FLOOR_TOP_Y, -6.0F));
+            for (int i = 0; i < 3; i++) {
+                m_persons.push_back(std::make_unique<Person>(
+                    m_personModel,
+                    glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -2.0F),
+                    glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -6.0F),
+                    (i * 0.5F) + 0.5F));
+            }
         }
         catch (const std::exception& error)
         {
@@ -172,11 +175,12 @@ void Application::processInput()
     {
         colliders.push_back(m_door->collider());
     }
-
-    if (m_person != nullptr)
-    {
-        m_person->update(m_time.deltaTime());
-        colliders.push_back(m_person->collider());
+    for (int i = 0; i < 3; i++) {
+        if (m_persons[i] != nullptr)
+        {
+            m_persons[i]->update(m_time.deltaTime());
+            colliders.push_back(m_persons[i]->collider());
+        }
     }
 
     m_physics->setColliders(colliders);
@@ -192,6 +196,7 @@ void Application::processInput()
     m_pistol->debugAdjust(*m_input, m_time.deltaTime());
     m_pistol->update(m_time.deltaTime());
     m_hand->debugAdjust(*m_input, m_time.deltaTime());
+    m_hand->update(m_time.deltaTime());
 
     // Fire on a fresh left-click (not held) -- spawns both a projectile and
     // a muzzle-flash particle burst at the pistol's muzzle.
@@ -237,16 +242,18 @@ void Application::render() const
     m_door->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_projectiles->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_particles->render(*m_renderer, *m_shader, *m_camera, m_light);
-    if (m_person != nullptr)
-    {
-        m_person->render(*m_renderer, *m_skeletalShader, *m_camera, m_light);
+    for (int i = 0; i < 3; i++) {
+        if (m_persons[i] != nullptr)
+        {
+            m_persons[i]->render(*m_renderer, *m_skeletalShader, *m_camera, m_light);
+        }
     }
 
     // Clear depth so the viewmodel always renders on top of world geometry,
     // preventing it from clipping into walls/floor when the camera gets close.
     glClear(GL_DEPTH_BUFFER_BIT);
     m_pistol->render(*m_renderer, *m_shader, *m_camera, m_light);
-    m_hand->render(*m_renderer, *m_shader, *m_camera, m_light, *m_pistol);
+    m_hand->render(*m_renderer, *m_skeletalShader, *m_camera, m_light, *m_pistol);
 
     const glm::vec3& pos = m_camera->position();
 

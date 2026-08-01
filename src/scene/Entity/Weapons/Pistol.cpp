@@ -15,8 +15,8 @@ namespace
 Pistol::Pistol()
     : Weapon(2.0F) // fires ~2 rounds/sec, placeholder for later
     , m_model(std::make_unique<Model>(PISTOL_MODEL_PATH))
-    , m_viewOffset(0.3F, -0.25F, -0.75F) // bottom-right of screen, in front of camera
-    , m_viewRotationDegrees(0.0F, 0.0F, 0.0F) // most exported models face +z; flip to face away from camera
+    , m_viewOffset(0.3F, -0.25F, -0.716992F) // bottom-right of screen, in front of camera
+    , m_viewRotationDegrees(0.0F, 360.724F, 0.0F) // tuned viewmodel orientation
     , m_viewScale(0.003F) // start much smaller than before; tune from here
     , m_muzzleLocalOffset(0.0F, 0.1F, -0.3F)
 {
@@ -51,7 +51,7 @@ void Pistol::debugAdjust(const InputManager& input, const float deltaTime)
 {
     const float scaleSpeed = 0.5F * deltaTime;
     const float rotationSpeed = 90.0F * deltaTime;
-    const float moveSpeed = 2.0f * deltaTime;
+    const float moveSpeed = 0.5f * deltaTime;
 
     if (input.isKeyPressed(GLFW_KEY_KP_ADD)) { m_viewScale *= (1.0F + scaleSpeed); }
     if (input.isKeyPressed(GLFW_KEY_KP_SUBTRACT)) { m_viewScale *= (1.0F - scaleSpeed); }
@@ -65,13 +65,15 @@ void Pistol::debugAdjust(const InputManager& input, const float deltaTime)
     if (input.isKeyPressed(GLFW_KEY_DOWN))  { m_viewOffset.y -= moveSpeed; }
     if (input.isKeyPressed(GLFW_KEY_LEFT))  { m_viewOffset.x -= moveSpeed; }
     if (input.isKeyPressed(GLFW_KEY_RIGHT)) { m_viewOffset.x += moveSpeed; }
+    if (input.isKeyPressed(GLFW_KEY_KP_9))  { m_viewOffset.z -= moveSpeed; }
+    if (input.isKeyPressed(GLFW_KEY_KP_3))  { m_viewOffset.z += moveSpeed; }
 
     if (input.isKeyPressed(GLFW_KEY_KP_5))
     {
         std::cout << "Pistol scale=" << m_viewScale
                    << " rotation=(" << m_viewRotationDegrees.x << ", "
                    << m_viewRotationDegrees.y << ")\n" 
-                   << "Position= " << m_viewOffset.x << ", " << m_viewOffset.y << "\n";
+                   << "Position= " << m_viewOffset.x << ", " << m_viewOffset.y << ", " << m_viewOffset.z <<"\n";
     }
 }
 void Pistol::triggerRecoil()

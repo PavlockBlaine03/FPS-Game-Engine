@@ -1,6 +1,7 @@
 #pragma once
 
-#include "rendering/Model.h"
+#include "rendering/SkeletalModel.h"
+#include "scene/Animation/Animator.h"
 
 #include <glm/glm.hpp>
 
@@ -19,6 +20,8 @@ public:
 	Hand();
 	~Hand();
 
+	void update(float deltaTime);
+
 	void render(
 		const Renderer& renderer,
 		const Shader& shader,
@@ -31,7 +34,8 @@ public:
 	void debugAdjust(const InputManager& input, float deltaTime);
 
 private:
-	std::unique_ptr<Model> m_model;
+	std::unique_ptr<SkeletalModel> m_model;
+	std::unique_ptr<Animator> m_animator;
 
 	// Offset/rotation/scale relative to the pistol's own view transform,
 	// tuned so the hand mesh wraps around the grip.
