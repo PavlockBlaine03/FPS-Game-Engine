@@ -1,9 +1,12 @@
 #include "core/Application.h"
+#include "rendering/SkeletalModel.h"
 #include "util/MeshFactory.h"
 
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <format>
+#include <filesystem>
+#include <iostream>
 
 namespace
 {
@@ -15,6 +18,8 @@ namespace
 
     constexpr const char* TEXT_VERTEX_SHADER_PATH = "assets/shaders/text.vert";
     constexpr const char* TEXT_FRAGMENT_SHADER_PATH = "assets/shaders/text.frag";
+    constexpr const char* SKINNED_VERTEX_SHADER_PATH = "assets/shaders/skinned.vert";
+    constexpr const char* PERSON_MODEL_PATH = "assets/models/Characters/Person/person.glb";
 
     constexpr const char* DOOR_TEXTURE_PATH = "assets/textures/wooddoor.png";
     constexpr float DOOR_THICKNESS = 0.075f;
@@ -38,6 +43,8 @@ Application::Application(const int width, const int height, const std::string& t
         Shader::fromFiles(BASIC_VERTEX_SHADER_PATH, BASIC_FRAGMENT_SHADER_PATH)))
     , m_textShader(std::make_unique<Shader>(
         Shader::fromFiles(TEXT_VERTEX_SHADER_PATH, TEXT_FRAGMENT_SHADER_PATH)))
+    , m_skeletalShader(std::make_unique<Shader>(
+        Shader::fromFiles(SKINNED_VERTEX_SHADER_PATH, BASIC_FRAGMENT_SHADER_PATH)))
     , m_camera(std::make_unique<Camera>(glm::vec3(0.0F, 1.0F + EYE_HEIGHT_OFFSET, 0.0F)))
     , m_renderer(std::make_unique<Renderer>(width, height))
     , m_textRenderer(std::make_unique<TextRenderer>(FONT_PATH, FONT_SIZE))
@@ -78,6 +85,27 @@ Application::Application(const int width, const int height, const std::string& t
 
     m_textShader->use();
     m_textShader->setMat4("projection", textProjection);
+
+    if (std::filesystem::exists(PERSON_MODEL_PATH))
+    {
+        try
+        {
+            m_personModel = std::make_shared<SkeletalModel>(PERSON_MODEL_PATH);
+            m_person = std::make_unique<Person>(
+                m_personModel,
+                glm::vec3(-2.0F, Scene::FLOOR_TOP_Y, -2.0F),
+                glm::vec3(-2.0F, Scene::FLOOR_TOP_Y, -6.0F));
+        }
+        catch (const std::exception& error)
+        {
+            std::cerr << "Animated person disabled: " << error.what() << '\n';
+        }
+    }
+    else
+    {
+        std::cerr << "Animated person disabled: add a humanoid with Idle and Walk clips at "
+                  << PERSON_MODEL_PATH << '\n';
+    }
 }
 
 Application::~Application() = default;
@@ -189,6 +217,10 @@ void Application::processInput()
 
     m_projectiles->update(m_time.deltaTime(), colliders, *m_particles);
     m_particles->update(m_time.deltaTime());
+    if (m_person != nullptr)
+    {
+        m_person->update(m_time.deltaTime());
+    }
 }
 
 void Application::render() const
@@ -199,6 +231,10 @@ void Application::render() const
     m_door->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_projectiles->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_particles->render(*m_renderer, *m_shader, *m_camera, m_light);
+    if (m_person != nullptr)
+    {
+        m_person->render(*m_renderer, *m_skeletalShader, *m_camera, m_light);
+    }
 
     // Clear depth so the viewmodel always renders on top of world geometry,
     // preventing it from clipping into walls/floor when the camera gets close.

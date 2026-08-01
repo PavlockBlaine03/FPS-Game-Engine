@@ -16,6 +16,7 @@
 #include "scene/Entity/Weapons/Pistol.h"
 #include "scene/Entity/Objects/Door.h"
 #include "scene/Entity/Player/Hand.h"
+#include "scene/Entity/Characters/Person.h"
 
 #include <memory>
 
@@ -38,6 +39,7 @@ private:
 	std::unique_ptr<InputManager> m_input;
 	std::unique_ptr<Shader> m_shader;
 	std::unique_ptr<Shader> m_textShader;
+	std::unique_ptr<Shader> m_skeletalShader;
 	std::unique_ptr<Camera> m_camera;
 	std::unique_ptr<Renderer> m_renderer;
 	std::unique_ptr<TextRenderer> m_textRenderer;
@@ -49,6 +51,8 @@ private:
 	std::unique_ptr<Door> m_door;
 	std::unique_ptr<AudioEngine> m_audio;
 	std::unique_ptr<Hand> m_hand;
+	std::shared_ptr<SkeletalModel> m_personModel;
+	std::unique_ptr<Person> m_person;
 
 	Light m_light;
 
