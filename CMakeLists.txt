@@ -56,6 +56,7 @@ add_executable(FPSGame
     src/util/SkeletalModelLoader.cpp
     src/scene/Scene.h
     src/scene/Scene.cpp
+    src/scene/WorldGenerator.h
     src/scene/Entity/Entity.h
     src/scene/Entity/Entity.cpp
     src/scene/Animation/Animator.h
@@ -82,7 +83,7 @@ add_executable(FPSGame
     src/audio/AudioEngine.h
     src/audio/AudioEngine.cpp
     src/scene/Entity/Player/Hand.h
-    src/scene/Entity/Player/Hand.cpp)
+    src/scene/Entity/Player/Hand.cpp "src/scene/WorldGenerator.cpp")
 
 target_include_directories(FPSGame
     PRIVATE

@@ -21,7 +21,8 @@ public:
         float width,
         float height,
         float thickness,
-        const std::string& texturePath);
+        const std::string& texturePath,
+        float baseYawDegrees = 0.0F);
     ~Door() override;
 
     Door(const Door&) = delete;
@@ -65,6 +66,7 @@ private:
     float m_width;
     float m_height;
     float m_thickness;
+    float m_baseYawDegrees;
 
     State m_state = State::Closed;
     float m_currentAngleDegrees = 0.0F;

@@ -30,6 +30,10 @@ namespace
     // than dead-center (stomach height).
     constexpr float EYE_HEIGHT_OFFSET = 0.7F;
 
+    // Start well inside the positive-Z room instead of in the dividing
+    // doorway. The X offset also keeps the player clear of the physics stack.
+    constexpr glm::vec3 PLAYER_START_POSITION(5.0F, 0.45F, 6.0F);
+
     // Maximum distance from the door's center the player can be to
     // interact with it.
     constexpr float DOOR_INTERACT_RANGE = 2.0F;
@@ -45,7 +49,8 @@ Application::Application(const int width, const int height, const std::string& t
         Shader::fromFiles(TEXT_VERTEX_SHADER_PATH, TEXT_FRAGMENT_SHADER_PATH)))
     , m_skeletalShader(std::make_unique<Shader>(
         Shader::fromFiles(SKINNED_VERTEX_SHADER_PATH, BASIC_FRAGMENT_SHADER_PATH)))
-    , m_camera(std::make_unique<Camera>(glm::vec3(0.0F, 1.0F + EYE_HEIGHT_OFFSET, 0.0F)))
+    , m_camera(std::make_unique<Camera>(
+        PLAYER_START_POSITION + glm::vec3(0.0F, EYE_HEIGHT_OFFSET, 0.0F)))
     , m_renderer(std::make_unique<Renderer>(width, height))
     , m_textRenderer(std::make_unique<TextRenderer>(FONT_PATH, FONT_SIZE))
     , m_scene(std::make_unique<Scene>())
@@ -55,27 +60,45 @@ Application::Application(const int width, const int height, const std::string& t
     , m_rigidBodies(std::make_unique<RigidBodyWorld>())
     , m_projectiles(std::make_unique<ProjectileManager>())
     , m_particles(std::make_unique<ParticleSystem>())
-    , m_door(std::make_unique<Door>(
-        // Hinge at the doorway's left edge (matching Scene's doorway gap),
-        // spanning its clear width/height, matching wall thickness.
-        glm::vec3(-Scene::DOORWAY_HALF_WIDTH, Scene::FLOOR_TOP_Y, -DOOR_THICKNESS * 0.5F),
-        Scene::DOORWAY_HALF_WIDTH * 2.0F,
-        Scene::DOORWAY_HEIGHT - Scene::FLOOR_TOP_Y,
-        DOOR_THICKNESS,
-        DOOR_TEXTURE_PATH))
-    , m_bodyPosition(0.0F, 1.0F, 0.0F)
+    , m_bodyPosition(PLAYER_START_POSITION)
     , m_width(width)
     , m_height(height)
 {
+    const float doorHeight = Scene::DOORWAY_HEIGHT - Scene::FLOOR_TOP_Y;
+    m_doors.push_back(std::make_unique<Door>(
+        glm::vec3(-Scene::DOORWAY_HALF_WIDTH, Scene::FLOOR_TOP_Y, -DOOR_THICKNESS * 0.5F),
+        Scene::DOORWAY_HALF_WIDTH * 2.0F, doorHeight,
+        DOOR_THICKNESS, DOOR_TEXTURE_PATH));
+
+    // Side-wall openings run along Z, so their doors are the same mesh rotated
+    // 90 degrees. North doors hinge at the high-Z edge; south doors at low Z.
+    for (const float wallX : { -4.0F, 4.0F })
+    {
+        m_doors.push_back(std::make_unique<Door>(
+            glm::vec3(wallX, Scene::FLOOR_TOP_Y, 6.5F),
+            1.0F, doorHeight, DOOR_THICKNESS, DOOR_TEXTURE_PATH, 90.0F));
+        m_doors.push_back(std::make_unique<Door>(
+            glm::vec3(wallX, Scene::FLOOR_TOP_Y, -6.5F),
+            1.0F, doorHeight, DOOR_THICKNESS, DOOR_TEXTURE_PATH, -90.0F));
+    }
+
     m_physics->setColliders(m_scene->colliders());
     m_rigidBodies->spawnCubeStack();
     m_rigidBodies->spawnBlueBall();
+    m_rigidBodies->spawnCubeStack(glm::vec3(-8.0F, Scene::FLOOR_TOP_Y, 8.0F), 3);
+    m_rigidBodies->spawnBlueBall(glm::vec3(-10.0F, 0.8F, 3.0F));
+    m_rigidBodies->spawnCubeStack(glm::vec3(8.0F, Scene::FLOOR_TOP_Y, 9.0F), 3);
+    m_rigidBodies->spawnBlueBall(glm::vec3(10.0F, 0.8F, 3.0F));
+    m_rigidBodies->spawnCubeStack(glm::vec3(-8.0F, Scene::FLOOR_TOP_Y, -8.0F), 3);
+    m_rigidBodies->spawnBlueBall(glm::vec3(-10.0F, 0.8F, -3.0F));
+    m_rigidBodies->spawnCubeStack(glm::vec3(8.0F, Scene::FLOOR_TOP_Y, -8.0F), 3);
+    m_rigidBodies->spawnBlueBall(glm::vec3(10.0F, 0.8F, -3.0F));
 
-    // Point light hanging from the ceiling, roughly centered in the room.
-    // (z in [-8, 0], so center is roughly z = -4).
-    m_light.position = glm::vec3(0.0F, 2.3F, -4.0F);
+    // A central ceiling light with stronger ambient fill keeps all six rooms
+    // readable until the renderer supports multiple point lights.
+    m_light.position = glm::vec3(0.0F, 2.3F, 0.0F);
     m_light.color = glm::vec3(2.2F, 2.1F, 1.9F);
-    m_light.ambientStrength = 0.15F;
+    m_light.ambientStrength = 0.28F;
     m_light.specularStrength = 0.4F;
     m_light.shininess = 32.0F;
 
@@ -100,6 +123,17 @@ Application::Application(const int width, const int height, const std::string& t
                     glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -2.0F),
                     glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -6.0F),
                     (i * 0.5F) + 0.5F));
+            }
+            for (const float roomX : { -8.0F, 8.0F })
+            {
+                m_persons.push_back(std::make_unique<Person>(
+                    m_personModel,
+                    glm::vec3(roomX, Scene::FLOOR_TOP_Y, 3.0F),
+                    glm::vec3(roomX, Scene::FLOOR_TOP_Y, 10.0F), 0.8F));
+                m_persons.push_back(std::make_unique<Person>(
+                    m_personModel,
+                    glm::vec3(roomX, Scene::FLOOR_TOP_Y, -3.0F),
+                    glm::vec3(roomX, Scene::FLOOR_TOP_Y, -10.0F), 0.8F));
             }
         }
         catch (const std::exception& error)
@@ -174,10 +208,8 @@ void Application::processInput()
     // given the scene's collider count.
     std::vector<AABB> colliders = m_scene->colliders();
 
-    if (m_door->isBlocking())
-    {
-        colliders.push_back(m_door->collider());
-    }
+    for (const std::unique_ptr<Door>& door : m_doors)
+        if (door->isBlocking()) colliders.push_back(door->collider());
     std::vector<AABB> npcColliders;
     npcColliders.reserve(m_persons.size());
     for (const std::unique_ptr<Person>& person : m_persons) {
@@ -232,20 +264,29 @@ void Application::processInput()
     // within range of it.
     if (m_input->isInteractKeyJustPressed())
     {
-        const glm::vec3 doorCenter = m_door->hingePosition() +
-            glm::vec3(Scene::DOORWAY_HALF_WIDTH, Scene::DOORWAY_HEIGHT * 0.5F, 0.0F);
-
-        if (glm::distance(m_bodyPosition, doorCenter) <= DOOR_INTERACT_RANGE)
+        Door* nearestDoor = nullptr;
+        float nearestDistance = DOOR_INTERACT_RANGE;
+        for (const std::unique_ptr<Door>& door : m_doors)
         {
-            m_door->interact();
+            const AABB doorBounds = door->collider();
+            const glm::vec3 doorCenter = (doorBounds.min + doorBounds.max) * 0.5F;
+            const float distance = glm::distance(m_bodyPosition, doorCenter);
+            if (distance <= nearestDistance)
+            {
+                nearestDistance = distance;
+                nearestDoor = door.get();
+            }
         }
+        if (nearestDoor != nullptr) nearestDoor->interact();
     }
 
-    m_door->update(m_time.deltaTime());
+    for (const std::unique_ptr<Door>& door : m_doors)
+        door->update(m_time.deltaTime());
 
     // Dynamic bodies use static room/door geometry, but not their own AABBs.
     std::vector<AABB> rigidStatics = m_scene->colliders();
-    if (m_door->isBlocking()) rigidStatics.push_back(m_door->collider());
+    for (const std::unique_ptr<Door>& door : m_doors)
+        if (door->isBlocking()) rigidStatics.push_back(door->collider());
     m_rigidBodies->movePlayerCollider(
         m_bodyPosition, glm::vec3(0.3F, 0.9F, 0.3F), m_time.deltaTime());
     m_rigidBodies->moveNpcColliders(npcColliders, m_time.deltaTime());
@@ -260,7 +301,8 @@ void Application::render() const
 
     m_scene->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_rigidBodies->render(*m_renderer, *m_shader, *m_camera, m_light);
-    m_door->render(*m_renderer, *m_shader, *m_camera, m_light);
+    for (const std::unique_ptr<Door>& door : m_doors)
+        door->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_projectiles->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_particles->render(*m_renderer, *m_shader, *m_camera, m_light);
     for (const std::unique_ptr<Person>& person : m_persons) {

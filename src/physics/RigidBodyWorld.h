@@ -22,8 +22,9 @@ public:
     RigidBodyWorld(const RigidBodyWorld&) = delete;
     RigidBodyWorld& operator=(const RigidBodyWorld&) = delete;
 
-    void spawnCubeStack();
-    void spawnBlueBall();
+    void spawnCubeStack(const glm::vec3& basePosition = glm::vec3(0.0F, -0.45F, 4.0F),
+        int rows = 5);
+    void spawnBlueBall(const glm::vec3& position = glm::vec3(3.0F, 0.8F, 4.0F));
     void movePlayerCollider(const glm::vec3& position,
         const glm::vec3& halfExtents, float deltaTime);
     void moveNpcColliders(const std::vector<AABB>& colliders, float deltaTime);

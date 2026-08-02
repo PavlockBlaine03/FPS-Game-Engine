@@ -15,11 +15,13 @@ Door::Door(
     const float width,
     const float height,
     const float thickness,
-    const std::string& texturePath)
+    const std::string& texturePath,
+    const float baseYawDegrees)
     : m_hingePosition(hingePosition)
     , m_width(width)
     , m_height(height)
     , m_thickness(thickness)
+    , m_baseYawDegrees(baseYawDegrees)
     , m_texture(std::make_unique<Texture>(texturePath))
 {
     // A single, non-repeating cube: the door texture should map once
@@ -92,7 +94,7 @@ AABB Door::collider() const
     // axis-aligned box that fully encloses the rotated door at this angle.
     // This tracks the door's real position in every state (closed, open,
     // or mid-swing) rather than artificially blocking the doorway opening.
-    const float angleRadians = glm::radians(m_currentAngleDegrees);
+    const float angleRadians = glm::radians(m_currentAngleDegrees - m_baseYawDegrees);
     const float cosAngle = std::cos(angleRadians);
     const float sinAngle = std::sin(angleRadians);
 
@@ -144,7 +146,8 @@ void Door::render(
     // 2) Rotate around that edge (world-space Y axis) by the current angle.
     // 3) Translate the whole thing to the hinge's world position.
     glm::mat4 model = glm::translate(glm::mat4(1.0F), m_hingePosition);
-    model = glm::rotate(model, glm::radians(-m_currentAngleDegrees), glm::vec3(0.0F, 1.0F, 0.0F));
+    model = glm::rotate(model, glm::radians(m_baseYawDegrees - m_currentAngleDegrees),
+        glm::vec3(0.0F, 1.0F, 0.0F));
     model = glm::translate(model, glm::vec3(m_width * 0.5F, m_height * 0.5F, 0.0F));
     model = glm::scale(model, glm::vec3(m_width, m_height, m_thickness));
 

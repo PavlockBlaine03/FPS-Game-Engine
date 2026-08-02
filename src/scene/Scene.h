@@ -7,6 +7,7 @@
 #include "rendering/Renderer.h"
 #include "rendering/Shader.h"
 #include "rendering/Texture.h"
+#include "scene/WorldGenerator.h"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -18,10 +19,10 @@ public:
 	// Doorway geometry, exposed so other systems (e.g. Door) can align
 	// exactly with the opening left in buildEnvironment() without
 	// duplicating magic numbers.
-	static constexpr float DOORWAY_HALF_WIDTH = 0.5F;
-	static constexpr float DOORWAY_HEIGHT = 2.0F;
-	static constexpr float WALL_THICKNESS = 0.1F;
-	static constexpr float FLOOR_TOP_Y = -0.45F; // floor collider top surface
+	static constexpr float DOORWAY_HALF_WIDTH = WorldGenerator::DOORWAY_HALF_WIDTH;
+	static constexpr float DOORWAY_HEIGHT = WorldGenerator::DOORWAY_HEIGHT;
+	static constexpr float WALL_THICKNESS = WorldGenerator::WALL_THICKNESS;
+	static constexpr float FLOOR_TOP_Y = WorldGenerator::FLOOR_TOP_Y;
 
 	Scene();
 	~Scene();
@@ -38,25 +39,10 @@ public:
 	[[nodiscard]] const std::vector<AABB>& colliders() const { return m_colliders; }
 
 private:
-	enum class SurfaceType
-	{
-		Floor,
-		Wall,
-		Ceiling
-	};
-	struct CubeInstance
-	{
-		glm::vec3 position;
-		glm::vec3 scale;
-		SurfaceType surface;
-	};
-
-	void buildEnvironment();
-
 	std::unique_ptr<Texture> m_floorTexture;
 	std::unique_ptr<Texture> m_wallTexture;
 	std::unique_ptr<Texture> m_ceilingTexture;
 	std::unique_ptr<Mesh> m_cubeMesh;
-	std::vector<CubeInstance> m_cubes;
+	std::vector<WorldCube> m_cubes;
 	std::vector<AABB> m_colliders;
 };
