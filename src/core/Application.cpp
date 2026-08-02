@@ -52,6 +52,7 @@ Application::Application(const int width, const int height, const std::string& t
     , m_pistol(std::make_unique<Pistol>())
     , m_hand(std::make_unique<Hand>())
     , m_physics(std::make_unique<PhysicsWorld>())
+    , m_rigidBodies(std::make_unique<RigidBodyWorld>())
     , m_projectiles(std::make_unique<ProjectileManager>())
     , m_particles(std::make_unique<ParticleSystem>())
     , m_door(std::make_unique<Door>(
@@ -67,6 +68,7 @@ Application::Application(const int width, const int height, const std::string& t
     , m_height(height)
 {
     m_physics->setColliders(m_scene->colliders());
+    m_rigidBodies->spawnCubeStack();
 
     // Point light hanging from the ceiling, roughly centered in the room.
     // (z in [-8, 0], so center is roughly z = -4).
@@ -175,13 +177,18 @@ void Application::processInput()
     {
         colliders.push_back(m_door->collider());
     }
-    for (int i = 0; i < 3; i++) {
-        if (m_persons[i] != nullptr)
+    for (const std::unique_ptr<Person>& person : m_persons) {
+        if (person != nullptr)
         {
-            m_persons[i]->update(m_time.deltaTime());
-            colliders.push_back(m_persons[i]->collider());
+            person->update(m_time.deltaTime());
+            colliders.push_back(person->collider());
         }
     }
+    // Keep a dynamic-body-free copy for projectile world tests. Rigid bodies
+    // are raycast directly below, so they cannot be mistaken for static walls.
+    const std::vector<AABB> projectileColliders = colliders;
+    const std::vector<AABB> rigidColliders = m_rigidBodies->colliders();
+    colliders.insert(colliders.end(), rigidColliders.begin(), rigidColliders.end());
 
     m_physics->setColliders(colliders);
 
@@ -230,7 +237,11 @@ void Application::processInput()
 
     m_door->update(m_time.deltaTime());
 
-    m_projectiles->update(m_time.deltaTime(), colliders, *m_particles);
+    // Dynamic bodies use static room/door geometry, but not their own AABBs.
+    std::vector<AABB> rigidStatics = m_scene->colliders();
+    if (m_door->isBlocking()) rigidStatics.push_back(m_door->collider());
+    m_rigidBodies->update(m_time.deltaTime(), rigidStatics);
+    m_projectiles->update(m_time.deltaTime(), projectileColliders, *m_particles, *m_rigidBodies);
     m_particles->update(m_time.deltaTime());
 }
 
@@ -239,13 +250,14 @@ void Application::render() const
     m_renderer->beginFrame();
 
     m_scene->render(*m_renderer, *m_shader, *m_camera, m_light);
+    m_rigidBodies->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_door->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_projectiles->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_particles->render(*m_renderer, *m_shader, *m_camera, m_light);
-    for (int i = 0; i < 3; i++) {
-        if (m_persons[i] != nullptr)
+    for (const std::unique_ptr<Person>& person : m_persons) {
+        if (person != nullptr)
         {
-            m_persons[i]->render(*m_renderer, *m_skeletalShader, *m_camera, m_light);
+            person->render(*m_renderer, *m_skeletalShader, *m_camera, m_light);
         }
     }
 
