@@ -256,7 +256,7 @@ void Application::processInput()
             fireDirection,
             aimColliders);
         m_particles->spawnBurst(muzzlePosition, fireDirection);
-        m_audio->play("assets/audio/weapons/pistol-shot.wav");
+        m_audio->play(AudioEngine::AudioType::PISTOL_SHOT);
         m_pistol->triggerRecoil();
     }
 
@@ -277,7 +277,18 @@ void Application::processInput()
                 nearestDoor = door.get();
             }
         }
-        if (nearestDoor != nullptr) nearestDoor->interact();
+        if (nearestDoor != nullptr) 
+        {
+            nearestDoor->interact();
+            if (nearestDoor->getState() == State::Opening) 
+            {
+                m_audio->play(AudioEngine::AudioType::DOOR_OPENING);
+            }
+            if (nearestDoor->getState() == State::Closing)
+            {
+                m_audio->play(AudioEngine::AudioType::DOOR_CLOSING);
+            }
+        }
     }
 
     for (const std::unique_ptr<Door>& door : m_doors)

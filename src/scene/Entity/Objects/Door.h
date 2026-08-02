@@ -10,6 +10,14 @@
 #include <memory>
 #include <string>
 
+enum class State
+{
+    Closed,
+    Opening,
+    Open,
+    Closing
+};
+
 /*
 * A Door class that tracks collision when open and closed
 */
@@ -39,6 +47,7 @@ public:
         const Shader& shader,
         const Camera& camera,
         const Light& light) const override;
+    State& getState() {return m_state;}
 
     // The door is always solid -- this returns a collider matching its
     // current swing angle (see collider()), whether closed, open, or
@@ -54,13 +63,7 @@ public:
     [[nodiscard]] const glm::vec3& hingePosition() const { return m_hingePosition; }
 
 private:
-    enum class State
-    {
-        Closed,
-        Opening,
-        Open,
-        Closing
-    };
+    
 
     glm::vec3 m_hingePosition;
     float m_width;
