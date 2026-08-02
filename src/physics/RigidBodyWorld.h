@@ -4,6 +4,7 @@
 #include "rendering/Light.h"
 
 #include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #include <memory>
 #include <vector>
 
@@ -16,6 +17,18 @@ class Texture;
 class RigidBodyWorld
 {
 public:
+    struct RagdollPart
+    {
+        int nodeIndex = -1;
+        int parentPart = -1;
+        glm::vec3 jointPosition{ 0.0F };
+        glm::vec3 endPosition{ 0.0F };
+        glm::quat boneRotation{ 1.0F, 0.0F, 0.0F, 0.0F };
+        glm::vec3 boneScale{ 1.0F };
+        float radius = 0.08F;
+        float mass = 1.0F;
+    };
+
     RigidBodyWorld();
     ~RigidBodyWorld();
 
@@ -36,6 +49,11 @@ public:
     [[nodiscard]] bool raycast(const glm::vec3& start, const glm::vec3& end,
         float& hitTime, std::size_t& bodyIndex) const;
     void applyShot(std::size_t bodyIndex, const glm::vec3& hitPoint,
+        const glm::vec3& direction);
+    [[nodiscard]] std::size_t createRagdoll(const std::vector<RagdollPart>& parts);
+    [[nodiscard]] bool ragdollPose(std::size_t ragdollIndex,
+        std::vector<glm::mat4>& boneWorldTransforms) const;
+    void applyRagdollShot(std::size_t ragdollIndex, const glm::vec3& hitPoint,
         const glm::vec3& direction);
 
 private:

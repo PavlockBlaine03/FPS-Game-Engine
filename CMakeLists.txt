@@ -16,7 +16,7 @@ find_package(glad CONFIG REQUIRED)
 find_package(freetype CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(assimp CONFIG REQUIRED)
-find_package(Bullet CONFIG REQUIRED)
+find_package(unofficial-omniverse-physx-sdk CONFIG REQUIRED)
 
 add_executable(FPSGame
     src/main.cpp
@@ -99,9 +99,7 @@ target_link_libraries(FPSGame
         glad::glad
         freetype
         assimp::assimp
-        BulletDynamics
-        BulletCollision
-        LinearMath
+        unofficial::omniverse-physx-sdk::sdk
 )
 
 if(MSVC)

@@ -122,7 +122,7 @@ Application::Application(const int width, const int height, const std::string& t
                     m_personModel,
                     glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -2.0F),
                     glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -6.0F),
-                    (i * 0.5F) + 0.5F));
+                    0.8F));
             }
             for (const float roomX : { -8.0F, 8.0F })
             {
@@ -210,20 +210,31 @@ void Application::processInput()
 
     for (const std::unique_ptr<Door>& door : m_doors)
         if (door->isBlocking()) colliders.push_back(door->collider());
+    const std::vector<AABB> projectileColliders = colliders;
     std::vector<AABB> npcColliders;
     npcColliders.reserve(m_persons.size());
     for (const std::unique_ptr<Person>& person : m_persons) {
         if (person != nullptr)
         {
-            person->update(m_time.deltaTime());
-            const AABB personCollider = person->collider();
-            colliders.push_back(personCollider);
-            npcColliders.push_back(personCollider);
+            person->update(m_time.deltaTime(), *m_rigidBodies);
+            if (!person->isRagdoll())
+            {
+                const AABB personCollider = person->collider();
+                colliders.push_back(personCollider);
+                npcColliders.push_back(personCollider);
+            }
+            else
+            {
+                // Preserve the Person-to-PhysX-collider index. Compressing
+                // this list makes every later kinematic NPC body teleport to
+                // the previous slot when somebody ragdolls, which can launch
+                // the newly created ragdoll across the map.
+                npcColliders.push_back(AABB{ glm::vec3(1.0F), glm::vec3(-1.0F) });
+            }
         }
     }
     // Keep a dynamic-body-free copy for projectile world tests. Rigid bodies
     // are raycast directly below, so they cannot be mistaken for static walls.
-    const std::vector<AABB> projectileColliders = colliders;
     std::vector<AABB> aimColliders = colliders;
     const std::vector<AABB> rigidColliders = m_rigidBodies->colliders();
     aimColliders.insert(aimColliders.end(), rigidColliders.begin(), rigidColliders.end());
@@ -302,7 +313,8 @@ void Application::processInput()
         m_bodyPosition, glm::vec3(0.3F, 0.9F, 0.3F), m_time.deltaTime());
     m_rigidBodies->moveNpcColliders(npcColliders, m_time.deltaTime());
     m_rigidBodies->update(m_time.deltaTime(), rigidStatics);
-    m_projectiles->update(m_time.deltaTime(), projectileColliders, *m_particles, *m_rigidBodies);
+    m_projectiles->update(m_time.deltaTime(), projectileColliders, m_persons,
+        *m_particles, *m_rigidBodies);
     m_particles->update(m_time.deltaTime());
 }
 

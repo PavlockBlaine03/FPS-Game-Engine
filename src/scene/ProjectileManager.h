@@ -14,6 +14,7 @@
 
 class ParticleSystem;
 class RigidBodyWorld;
+class Person;
 
 class ProjectileManager
 {
@@ -35,6 +36,7 @@ public:
     void update(
         float deltaTime,
         const std::vector<AABB>& colliders,
+        const std::vector<std::unique_ptr<Person>>& persons,
         ParticleSystem& particles,
         RigidBodyWorld& rigidBodies);
 
