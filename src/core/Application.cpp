@@ -69,6 +69,7 @@ Application::Application(const int width, const int height, const std::string& t
 {
     m_physics->setColliders(m_scene->colliders());
     m_rigidBodies->spawnCubeStack();
+    m_rigidBodies->spawnBlueBall();
 
     // Point light hanging from the ceiling, roughly centered in the room.
     // (z in [-8, 0], so center is roughly z = -4).
@@ -177,18 +178,23 @@ void Application::processInput()
     {
         colliders.push_back(m_door->collider());
     }
+    std::vector<AABB> npcColliders;
+    npcColliders.reserve(m_persons.size());
     for (const std::unique_ptr<Person>& person : m_persons) {
         if (person != nullptr)
         {
             person->update(m_time.deltaTime());
-            colliders.push_back(person->collider());
+            const AABB personCollider = person->collider();
+            colliders.push_back(personCollider);
+            npcColliders.push_back(personCollider);
         }
     }
     // Keep a dynamic-body-free copy for projectile world tests. Rigid bodies
     // are raycast directly below, so they cannot be mistaken for static walls.
     const std::vector<AABB> projectileColliders = colliders;
+    std::vector<AABB> aimColliders = colliders;
     const std::vector<AABB> rigidColliders = m_rigidBodies->colliders();
-    colliders.insert(colliders.end(), rigidColliders.begin(), rigidColliders.end());
+    aimColliders.insert(aimColliders.end(), rigidColliders.begin(), rigidColliders.end());
 
     m_physics->setColliders(colliders);
 
@@ -216,7 +222,7 @@ void Application::processInput()
             muzzlePosition,
             m_camera->position(),
             fireDirection,
-            colliders);
+            aimColliders);
         m_particles->spawnBurst(muzzlePosition, fireDirection);
         m_audio->play("assets/audio/weapons/pistol-shot.wav");
         m_pistol->triggerRecoil();
@@ -240,6 +246,9 @@ void Application::processInput()
     // Dynamic bodies use static room/door geometry, but not their own AABBs.
     std::vector<AABB> rigidStatics = m_scene->colliders();
     if (m_door->isBlocking()) rigidStatics.push_back(m_door->collider());
+    m_rigidBodies->movePlayerCollider(
+        m_bodyPosition, glm::vec3(0.3F, 0.9F, 0.3F), m_time.deltaTime());
+    m_rigidBodies->moveNpcColliders(npcColliders, m_time.deltaTime());
     m_rigidBodies->update(m_time.deltaTime(), rigidStatics);
     m_projectiles->update(m_time.deltaTime(), projectileColliders, *m_particles, *m_rigidBodies);
     m_particles->update(m_time.deltaTime());
