@@ -122,7 +122,7 @@ Application::Application(const int width, const int height, const std::string& t
                     m_personModel,
                     glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -2.0F),
                     glm::vec3(-2.0F + (i * 2), Scene::FLOOR_TOP_Y, -6.0F),
-                    0.8F));
+                    (i * 0.5F) + 0.5F));
             }
             for (const float roomX : { -8.0F, 8.0F })
             {
@@ -225,10 +225,8 @@ void Application::processInput()
             }
             else
             {
-                // Preserve the Person-to-PhysX-collider index. Compressing
-                // this list makes every later kinematic NPC body teleport to
-                // the previous slot when somebody ragdolls, which can launch
-                // the newly created ragdoll across the map.
+                // Keep one stable PhysX collider slot per Person. An invalid
+                // AABB tells RigidBodyWorld to disable this kinematic body.
                 npcColliders.push_back(AABB{ glm::vec3(1.0F), glm::vec3(-1.0F) });
             }
         }
