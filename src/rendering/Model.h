@@ -6,6 +6,7 @@
 #include "rendering/Renderer.h"
 #include "rendering/Shader.h"
 #include "rendering/Texture.h"
+#include "physics/AABB.h"
 
 #include <glm/glm.hpp>
 
@@ -29,6 +30,8 @@ public:
         const glm::mat4& model,
         const Light& light) const;
 
+    [[nodiscard]] const AABB& localBounds() const { return m_localBounds; }
+
 private:
     struct SubMesh
     {
@@ -37,4 +40,5 @@ private:
     };
 
     std::vector<SubMesh> m_subMeshes;
+    AABB m_localBounds{ glm::vec3(0.0F), glm::vec3(0.0F) };
 };

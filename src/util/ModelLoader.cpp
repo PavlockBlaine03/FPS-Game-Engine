@@ -84,6 +84,12 @@ namespace
         {
             const aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
+            aiString materialName;
+            if (material->Get(AI_MATKEY_NAME, materialName) == AI_SUCCESS)
+            {
+                data.materialName = materialName.C_Str();
+            }
+
             aiString texturePath;
 
             if (material->GetTexture(aiTextureType_DIFFUSE, 0, &texturePath) == AI_SUCCESS)

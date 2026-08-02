@@ -13,6 +13,8 @@
 #include <vector>
 #include <memory>
 
+class Model;
+
 class Scene
 {
 public:
@@ -45,4 +47,6 @@ private:
 	std::unique_ptr<Mesh> m_cubeMesh;
 	std::vector<WorldCube> m_cubes;
 	std::vector<AABB> m_colliders;
+	std::unique_ptr<Model> m_stairModel;
+	glm::mat4 m_stairTransform{ 1.0F };
 };
