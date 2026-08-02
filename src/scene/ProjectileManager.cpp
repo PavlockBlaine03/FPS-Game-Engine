@@ -1,6 +1,7 @@
 #include "scene/ProjectileManager.h"
 #include "scene/ParticleSystem.h"
 #include "physics/RigidBodyWorld.h"
+#include "scene/Entity/Characters/Person.h"
 #include "util/MeshFactory.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -110,6 +111,7 @@ void ProjectileManager::spawnAimed(
 void ProjectileManager::update(
     const float deltaTime,
     const std::vector<AABB>& colliders,
+    const std::vector<std::unique_ptr<Person>>& persons,
     ParticleSystem& particles,
     RigidBodyWorld& rigidBodies)
 {
@@ -128,6 +130,7 @@ void ProjectileManager::update(
         float earliestHitTime = 1.0F;
         bool hitRigidBody = false;
         std::size_t rigidBodyIndex = 0;
+        Person* hitPerson = nullptr;
 
         for (const AABB& collider : colliders)
         {
@@ -137,6 +140,20 @@ void ProjectileManager::update(
             {
                 hit = true;
                 earliestHitTime = hitTime;
+            }
+        }
+
+        for (const std::unique_ptr<Person>& person : persons)
+        {
+            if (person == nullptr || person->isRagdoll()) continue;
+            float personHitTime = 0.0F;
+            if (segmentIntersectsAABB(previousPosition, nextPosition,
+                person->collider(), personHitTime) && personHitTime <= earliestHitTime)
+            {
+                hit = true;
+                hitRigidBody = false;
+                hitPerson = person.get();
+                earliestHitTime = personHitTime;
             }
         }
 
@@ -160,6 +177,8 @@ void ProjectileManager::update(
             particles.spawnBurst(hitPosition, -bullet.direction);
             if (hitRigidBody)
                 rigidBodies.applyShot(rigidBodyIndex, hitPosition, bullet.direction);
+            else if (hitPerson != nullptr)
+                hitPerson->applyShot(hitPosition, bullet.direction, rigidBodies);
             bullet.alive = false;
         }
         else if (bullet.distanceTraveled >= bullet.maxDistance)

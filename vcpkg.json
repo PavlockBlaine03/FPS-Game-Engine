@@ -7,7 +7,7 @@
     "freetype",
     "stb",
     "assimp",
-    "bullet3",
+    "physx",
     "miniaudio",
     {
       "name": "glad",
