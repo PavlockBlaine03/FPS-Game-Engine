@@ -1,5 +1,8 @@
 #include "util/MeshFactory.h"
 
+#include <cmath>
+#include <numbers>
+
 MeshData MeshFactory::createCube(const float size, const float textureTiling, const bool mirrorFrontBackU)
 {
     const float half = size * 0.5F;
@@ -65,5 +68,41 @@ MeshData MeshFactory::createCube(const float size, const float textureTiling, co
         data.indices.push_back(base + 0);
     }
 
+    return data;
+}
+
+MeshData MeshFactory::createSphere(
+    const float radius, const unsigned int sectors, const unsigned int stacks)
+{
+    MeshData data;
+    for (unsigned int stack = 0; stack <= stacks; ++stack)
+    {
+        const float v = static_cast<float>(stack) / static_cast<float>(stacks);
+        const float latitude = std::numbers::pi_v<float> * (0.5F - v);
+        const float ringRadius = std::cos(latitude);
+        const float y = std::sin(latitude);
+        for (unsigned int sector = 0; sector <= sectors; ++sector)
+        {
+            const float u = static_cast<float>(sector) / static_cast<float>(sectors);
+            const float longitude = u * std::numbers::pi_v<float> * 2.0F;
+            const float x = ringRadius * std::cos(longitude);
+            const float z = ringRadius * std::sin(longitude);
+            data.vertices.insert(data.vertices.end(), {
+                x * radius, y * radius, z * radius,
+                x, y, z, u, v
+            });
+        }
+    }
+
+    for (unsigned int stack = 0; stack < stacks; ++stack)
+    for (unsigned int sector = 0; sector < sectors; ++sector)
+    {
+        const unsigned int first = stack * (sectors + 1) + sector;
+        const unsigned int second = first + sectors + 1;
+        data.indices.insert(data.indices.end(), {
+            first, second, first + 1,
+            first + 1, second, second + 1
+        });
+    }
     return data;
 }

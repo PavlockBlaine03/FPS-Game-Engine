@@ -23,6 +23,10 @@ public:
     RigidBodyWorld& operator=(const RigidBodyWorld&) = delete;
 
     void spawnCubeStack();
+    void spawnBlueBall();
+    void movePlayerCollider(const glm::vec3& position,
+        const glm::vec3& halfExtents, float deltaTime);
+    void moveNpcColliders(const std::vector<AABB>& colliders, float deltaTime);
     void update(float deltaTime, const std::vector<AABB>& staticColliders);
     void render(const Renderer& renderer, const Shader& shader,
         const Camera& camera, const Light& light) const;
@@ -38,4 +42,6 @@ private:
     std::unique_ptr<Impl> m_impl;
     std::unique_ptr<Mesh> m_mesh;
     std::unique_ptr<Texture> m_texture;
+    std::unique_ptr<Mesh> m_sphereMesh;
+    std::unique_ptr<Texture> m_blueTexture;
 };

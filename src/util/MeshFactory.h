@@ -24,4 +24,9 @@ public:
 		float size = 1.0f,
 		float textureTiling = 1.0f,
 		bool mirrorFrontBackU = false);
+
+	[[nodiscard]] static MeshData createSphere(
+		float radius = 0.5f,
+		unsigned int sectors = 24,
+		unsigned int stacks = 16);
 };

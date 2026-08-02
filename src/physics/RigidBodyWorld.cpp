@@ -15,6 +15,8 @@ namespace
 {
     constexpr short DYNAMIC_GROUP = 1;
     constexpr short STATIC_GROUP = 2;
+    constexpr short PLAYER_GROUP = 4;
+    constexpr short NPC_GROUP = 8;
     constexpr float SHOT_IMPULSE = 8.5F;
 
     btVector3 toBullet(const glm::vec3& value)
@@ -39,19 +41,38 @@ struct RigidBodyWorld::Impl
     std::vector<std::unique_ptr<btCollisionShape>> dynamicShapes;
     std::vector<std::unique_ptr<btMotionState>> dynamicMotionStates;
     std::vector<std::unique_ptr<btRigidBody>> dynamicBodies;
+    std::vector<glm::vec3> visualScales;
+    std::vector<bool> sphereVisuals;
     std::vector<std::unique_ptr<btCollisionShape>> staticShapes;
     std::vector<std::unique_ptr<btRigidBody>> staticBodies;
     std::vector<AABB> cachedStaticColliders;
+    std::unique_ptr<btBoxShape> playerShape;
+    std::unique_ptr<btRigidBody> playerBody;
+    bool playerInitialized = false;
+    std::vector<std::unique_ptr<btBoxShape>> npcShapes;
+    std::vector<std::unique_ptr<btRigidBody>> npcBodies;
+    std::vector<bool> npcInitialized;
 
     Impl()
     {
         world.setGravity(btVector3(0.0F, -9.81F, 0.0F));
         world.getSolverInfo().m_numIterations = 12;
         world.getSolverInfo().m_splitImpulse = true;
+
+        playerShape = std::make_unique<btBoxShape>(btVector3(0.3F, 0.9F, 0.3F));
+        btRigidBody::btRigidBodyConstructionInfo playerInfo(0.0F, nullptr, playerShape.get());
+        playerBody = std::make_unique<btRigidBody>(playerInfo);
+        playerBody->setCollisionFlags(playerBody->getCollisionFlags()
+            | btCollisionObject::CF_KINEMATIC_OBJECT);
+        playerBody->setActivationState(DISABLE_DEACTIVATION);
+        playerBody->setFriction(0.8F);
+        world.addRigidBody(playerBody.get(), PLAYER_GROUP, DYNAMIC_GROUP);
     }
 
     ~Impl()
     {
+        world.removeRigidBody(playerBody.get());
+        for (const auto& body : npcBodies) world.removeRigidBody(body.get());
         for (const auto& body : dynamicBodies) world.removeRigidBody(body.get());
         for (const auto& body : staticBodies) world.removeRigidBody(body.get());
     }
@@ -99,10 +120,14 @@ struct RigidBodyWorld::Impl
 RigidBodyWorld::RigidBodyWorld()
     : m_impl(std::make_unique<Impl>())
     , m_texture(std::make_unique<Texture>(glm::vec3(0.72F, 0.22F, 0.12F)))
+    , m_blueTexture(std::make_unique<Texture>(glm::vec3(0.08F, 0.25F, 0.9F)))
 {
     const MeshData data = MeshFactory::createCube(1.0F, 1.0F);
     m_mesh = std::make_unique<Mesh>(data.vertices.data(), data.vertices.size(),
         data.indices.data(), data.indices.size(), 8);
+    const MeshData sphereData = MeshFactory::createSphere();
+    m_sphereMesh = std::make_unique<Mesh>(sphereData.vertices.data(), sphereData.vertices.size(),
+        sphereData.indices.data(), sphereData.indices.size(), 8);
 }
 
 RigidBodyWorld::~RigidBodyWorld() = default;
@@ -136,12 +161,112 @@ void RigidBodyWorld::spawnCubeStack()
             body->setSpinningFriction(0.08F);
             body->setDamping(0.04F, 0.08F);
             body->setUserIndex(static_cast<int>(m_impl->dynamicBodies.size()));
-            m_impl->world.addRigidBody(body.get(), DYNAMIC_GROUP, DYNAMIC_GROUP | STATIC_GROUP);
+            m_impl->world.addRigidBody(body.get(), DYNAMIC_GROUP,
+                DYNAMIC_GROUP | STATIC_GROUP | PLAYER_GROUP | NPC_GROUP);
             m_impl->dynamicShapes.push_back(std::move(shape));
             m_impl->dynamicMotionStates.push_back(std::move(motionState));
             m_impl->dynamicBodies.push_back(std::move(body));
+            m_impl->visualScales.push_back(glm::vec3(size));
+            m_impl->sphereVisuals.push_back(false);
         }
     }
+}
+
+void RigidBodyWorld::spawnBlueBall()
+{
+    constexpr float radius = 0.32F;
+    auto shape = std::make_unique<btSphereShape>(radius);
+    btTransform transform;
+    transform.setIdentity();
+    transform.setOrigin(btVector3(3.0F, 0.8F, 4.0F));
+    auto motionState = std::make_unique<btDefaultMotionState>(transform);
+    btVector3 inertia(0.0F, 0.0F, 0.0F);
+    constexpr float mass = 0.8F;
+    shape->calculateLocalInertia(mass, inertia);
+    btRigidBody::btRigidBodyConstructionInfo info(mass, motionState.get(), shape.get(), inertia);
+    auto body = std::make_unique<btRigidBody>(info);
+    body->setFriction(0.65F);
+    body->setRestitution(0.62F);
+    body->setRollingFriction(0.04F);
+    body->setSpinningFriction(0.03F);
+    body->setDamping(0.025F, 0.04F);
+    body->setUserIndex(static_cast<int>(m_impl->dynamicBodies.size()));
+    m_impl->world.addRigidBody(body.get(), DYNAMIC_GROUP,
+        DYNAMIC_GROUP | STATIC_GROUP | PLAYER_GROUP | NPC_GROUP);
+    m_impl->dynamicShapes.push_back(std::move(shape));
+    m_impl->dynamicMotionStates.push_back(std::move(motionState));
+    m_impl->dynamicBodies.push_back(std::move(body));
+    m_impl->visualScales.push_back(glm::vec3(radius * 2.0F));
+    m_impl->sphereVisuals.push_back(true);
+}
+
+void RigidBodyWorld::moveNpcColliders(const std::vector<AABB>& colliders, float deltaTime)
+{
+    while (m_impl->npcBodies.size() > colliders.size())
+    {
+        m_impl->world.removeRigidBody(m_impl->npcBodies.back().get());
+        m_impl->npcBodies.pop_back();
+        m_impl->npcShapes.pop_back();
+        m_impl->npcInitialized.pop_back();
+    }
+
+    while (m_impl->npcBodies.size() < colliders.size())
+    {
+        auto shape = std::make_unique<btBoxShape>(btVector3(0.3F, 0.9F, 0.3F));
+        btRigidBody::btRigidBodyConstructionInfo info(0.0F, nullptr, shape.get());
+        auto body = std::make_unique<btRigidBody>(info);
+        body->setCollisionFlags(body->getCollisionFlags()
+            | btCollisionObject::CF_KINEMATIC_OBJECT);
+        body->setActivationState(DISABLE_DEACTIVATION);
+        body->setFriction(0.8F);
+        m_impl->world.addRigidBody(body.get(), NPC_GROUP, DYNAMIC_GROUP);
+        m_impl->npcShapes.push_back(std::move(shape));
+        m_impl->npcBodies.push_back(std::move(body));
+        m_impl->npcInitialized.push_back(false);
+    }
+
+    for (std::size_t i = 0; i < colliders.size(); ++i)
+    {
+        const glm::vec3 halfExtents = (colliders[i].max - colliders[i].min) * 0.5F;
+        const glm::vec3 center = (colliders[i].min + colliders[i].max) * 0.5F;
+        const btScalar margin = m_impl->npcShapes[i]->getMargin();
+        m_impl->npcShapes[i]->setImplicitShapeDimensions(toBullet(halfExtents)
+            - btVector3(margin, margin, margin));
+
+        btTransform transform = m_impl->npcBodies[i]->getWorldTransform();
+        const btVector3 nextPosition = toBullet(center);
+        if (m_impl->npcInitialized[i] && deltaTime > 0.00001F)
+            m_impl->npcBodies[i]->setLinearVelocity(
+                (nextPosition - transform.getOrigin()) / deltaTime);
+        else
+            m_impl->npcBodies[i]->setLinearVelocity(btVector3(0.0F, 0.0F, 0.0F));
+        transform.setIdentity();
+        transform.setOrigin(nextPosition);
+        m_impl->npcBodies[i]->setWorldTransform(transform);
+        m_impl->world.updateSingleAabb(m_impl->npcBodies[i].get());
+        m_impl->npcInitialized[i] = true;
+    }
+}
+
+void RigidBodyWorld::movePlayerCollider(const glm::vec3& position,
+    const glm::vec3& halfExtents, float deltaTime)
+{
+    m_impl->playerShape->setImplicitShapeDimensions(toBullet(halfExtents)
+        - btVector3(m_impl->playerShape->getMargin(), m_impl->playerShape->getMargin(),
+            m_impl->playerShape->getMargin()));
+
+    btTransform transform = m_impl->playerBody->getWorldTransform();
+    const btVector3 nextPosition = toBullet(position);
+    if (m_impl->playerInitialized && deltaTime > 0.00001F)
+        m_impl->playerBody->setLinearVelocity(
+            (nextPosition - transform.getOrigin()) / deltaTime);
+    else
+        m_impl->playerBody->setLinearVelocity(btVector3(0.0F, 0.0F, 0.0F));
+    transform.setIdentity();
+    transform.setOrigin(nextPosition);
+    m_impl->playerBody->setWorldTransform(transform);
+    m_impl->world.updateSingleAabb(m_impl->playerBody.get());
+    m_impl->playerInitialized = true;
 }
 
 void RigidBodyWorld::update(float deltaTime, const std::vector<AABB>& staticColliders)
@@ -201,9 +326,9 @@ void RigidBodyWorld::render(const Renderer& renderer, const Shader& shader,
         for (int column = 0; column < 4; ++column)
             for (int row = 0; row < 4; ++row)
                 model[column][row] = rawMatrix[column * 4 + row];
-        const btVector3 halfExtents = static_cast<btBoxShape*>(
-            m_impl->dynamicShapes[i].get())->getHalfExtentsWithMargin();
-        model = glm::scale(model, toGlm(halfExtents) * 2.0F);
-        renderer.draw(*m_mesh, shader, camera, model, *m_texture, light);
+        model = glm::scale(model, m_impl->visualScales[i]);
+        const Mesh& mesh = m_impl->sphereVisuals[i] ? *m_sphereMesh : *m_mesh;
+        const Texture& texture = m_impl->sphereVisuals[i] ? *m_blueTexture : *m_texture;
+        renderer.draw(mesh, shader, camera, model, texture, light);
     }
 }
