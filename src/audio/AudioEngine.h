@@ -9,12 +9,19 @@ public:
     AudioEngine();
     ~AudioEngine();
 
+    enum AudioType
+    {
+        DOOR_CLOSING,
+        DOOR_OPENING,
+        PISTOL_SHOT
+    };
+
     AudioEngine(const AudioEngine&) = delete;
     AudioEngine& operator=(const AudioEngine&) = delete;
     AudioEngine(AudioEngine&&) = delete;
     AudioEngine& operator=(AudioEngine&&) = delete;
 
-    void play(const std::string& filePath);
+    void play(AudioType audio);
     void setMasterVolume(float volume);
 
 private:
