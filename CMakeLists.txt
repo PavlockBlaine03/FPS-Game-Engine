@@ -16,6 +16,7 @@ find_package(glad CONFIG REQUIRED)
 find_package(freetype CONFIG REQUIRED)
 find_package(Stb REQUIRED)
 find_package(assimp CONFIG REQUIRED)
+find_package(Bullet CONFIG REQUIRED)
 
 add_executable(FPSGame
     src/main.cpp
@@ -68,6 +69,8 @@ add_executable(FPSGame
     src/physics/AABB.h
     src/physics/PhysicsWorld.h
     src/physics/PhysicsWorld.cpp
+    src/physics/RigidBodyWorld.h
+    src/physics/RigidBodyWorld.cpp
     src/rendering/Light.h
     src/scene/ProjectileManager.h
     src/scene/ProjectileManager.cpp
@@ -95,6 +98,9 @@ target_link_libraries(FPSGame
         glad::glad
         freetype
         assimp::assimp
+        BulletDynamics
+        BulletCollision
+        LinearMath
 )
 
 if(MSVC)

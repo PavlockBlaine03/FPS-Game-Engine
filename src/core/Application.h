@@ -5,6 +5,7 @@
 #include "core/Time.h"
 #include "input/InputManager.h"
 #include "physics/PhysicsWorld.h"
+#include "physics/RigidBodyWorld.h"
 #include "rendering/Camera.h"
 #include "rendering/Light.h"
 #include "rendering/Renderer.h"
@@ -46,6 +47,7 @@ private:
 	std::unique_ptr<Scene> m_scene;
 	std::unique_ptr<Pistol> m_pistol;
 	std::unique_ptr<PhysicsWorld> m_physics;
+	std::unique_ptr<RigidBodyWorld> m_rigidBodies;
 	std::unique_ptr<ProjectileManager> m_projectiles;
 	std::unique_ptr<ParticleSystem> m_particles;
 	std::unique_ptr<Door> m_door;

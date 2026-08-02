@@ -1,5 +1,6 @@
 #include "scene/ProjectileManager.h"
 #include "scene/ParticleSystem.h"
+#include "physics/RigidBodyWorld.h"
 #include "util/MeshFactory.h"
 
 #include <glm/gtc/matrix_transform.hpp>
@@ -109,7 +110,8 @@ void ProjectileManager::spawnAimed(
 void ProjectileManager::update(
     const float deltaTime,
     const std::vector<AABB>& colliders,
-    ParticleSystem& particles)
+    ParticleSystem& particles,
+    RigidBodyWorld& rigidBodies)
 {
     for (Bullet& bullet : m_bullets)
     {
@@ -124,6 +126,8 @@ void ProjectileManager::update(
 
         bool hit = false;
         float earliestHitTime = 1.0F;
+        bool hitRigidBody = false;
+        std::size_t rigidBodyIndex = 0;
 
         for (const AABB& collider : colliders)
         {
@@ -136,6 +140,17 @@ void ProjectileManager::update(
             }
         }
 
+        float rigidHitTime = 1.0F;
+        std::size_t candidateBody = 0;
+        if (rigidBodies.raycast(previousPosition, nextPosition, rigidHitTime, candidateBody)
+            && rigidHitTime <= earliestHitTime)
+        {
+            hit = true;
+            hitRigidBody = true;
+            earliestHitTime = rigidHitTime;
+            rigidBodyIndex = candidateBody;
+        }
+
         bullet.distanceTraveled += step;
 
         if (hit)
@@ -143,6 +158,8 @@ void ProjectileManager::update(
             const glm::vec3 hitPosition = previousPosition
                 + (nextPosition - previousPosition) * earliestHitTime;
             particles.spawnBurst(hitPosition, -bullet.direction);
+            if (hitRigidBody)
+                rigidBodies.applyShot(rigidBodyIndex, hitPosition, bullet.direction);
             bullet.alive = false;
         }
         else if (bullet.distanceTraveled >= bullet.maxDistance)
@@ -185,7 +202,7 @@ void ProjectileManager::render(
 
         glm::mat4 model = glm::translate(glm::mat4(1.0F), projectile.position);
         model = model * lookRotation;
-        model = glm::scale(model, BULLET_HALF_EXTENTS * 2.0F);
+        model = glm::scale(model, BULLET_HALF_EXTENTS * 0.25F);
 
         renderer.draw(*m_bulletMesh, shader, camera, model, *m_bulletTexture, light);
     }

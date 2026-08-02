@@ -13,6 +13,7 @@
 #include <vector>
 
 class ParticleSystem;
+class RigidBodyWorld;
 
 class ProjectileManager
 {
@@ -34,7 +35,8 @@ public:
     void update(
         float deltaTime,
         const std::vector<AABB>& colliders,
-        ParticleSystem& particles);
+        ParticleSystem& particles,
+        RigidBodyWorld& rigidBodies);
 
     void render(
         const Renderer& renderer,
