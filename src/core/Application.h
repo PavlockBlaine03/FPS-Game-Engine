@@ -50,7 +50,7 @@ private:
 	std::unique_ptr<RigidBodyWorld> m_rigidBodies;
 	std::unique_ptr<ProjectileManager> m_projectiles;
 	std::unique_ptr<ParticleSystem> m_particles;
-	std::unique_ptr<Door> m_door;
+	std::vector<std::unique_ptr<Door>> m_doors;
 	std::unique_ptr<AudioEngine> m_audio;
 	std::unique_ptr<Hand> m_hand;
 	std::shared_ptr<SkeletalModel> m_personModel;

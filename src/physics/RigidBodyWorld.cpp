@@ -132,19 +132,21 @@ RigidBodyWorld::RigidBodyWorld()
 
 RigidBodyWorld::~RigidBodyWorld() = default;
 
-void RigidBodyWorld::spawnCubeStack()
+void RigidBodyWorld::spawnCubeStack(const glm::vec3& basePosition, const int requestedRows)
 {
     constexpr float size = 0.45F;
     constexpr float gap = 0.025F;
-    constexpr int rows = 5;
+    const int rows = std::clamp(requestedRows, 1, 8);
     for (int row = 0; row < rows; ++row)
     {
         const int count = rows - row;
         for (int column = 0; column < count; ++column)
         {
-            const glm::vec3 position(
+            glm::vec3 position(
                 (static_cast<float>(column) - static_cast<float>(count - 1) * 0.5F) * (size + gap),
-                -0.45F + size * 0.5F + static_cast<float>(row) * (size + gap), 4.0F);
+                basePosition.y + size * 0.5F + static_cast<float>(row) * (size + gap),
+                basePosition.z);
+            position.x += basePosition.x;
             auto shape = std::make_unique<btBoxShape>(btVector3(size * 0.5F, size * 0.5F, size * 0.5F));
             btTransform transform;
             transform.setIdentity();
@@ -172,13 +174,13 @@ void RigidBodyWorld::spawnCubeStack()
     }
 }
 
-void RigidBodyWorld::spawnBlueBall()
+void RigidBodyWorld::spawnBlueBall(const glm::vec3& position)
 {
     constexpr float radius = 0.32F;
     auto shape = std::make_unique<btSphereShape>(radius);
     btTransform transform;
     transform.setIdentity();
-    transform.setOrigin(btVector3(3.0F, 0.8F, 4.0F));
+    transform.setOrigin(toBullet(position));
     auto motionState = std::make_unique<btDefaultMotionState>(transform);
     btVector3 inertia(0.0F, 0.0F, 0.0F);
     constexpr float mass = 0.8F;
