@@ -7,6 +7,7 @@ struct ModelMeshData
 {
 	std::vector<float> vertices;
 	std::vector<unsigned int> indices;
+	std::string materialName;
 	std::string diffuseTexturePath;
 };
 

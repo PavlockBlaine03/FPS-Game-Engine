@@ -11,17 +11,24 @@ void WorldGenerator::build()
     {
         for (int z = -MAP_HALF_DEPTH; z <= MAP_HALF_DEPTH; ++z)
         {
+            // Temporary roof-access opening above the central north room.
+            if (x >= -2 && x <= 2 && z >= 5 && z <= 11) continue;
             const glm::vec3 position(static_cast<float>(x), 2.5F, static_cast<float>(z));
             const glm::vec3 scale(1.0F, 0.1F, 1.0F);
 
             m_cubes.push_back(WorldCube{ position, scale, WorldSurface::Ceiling });
         }
     }
-    // One broad collider replaces hundreds of coplanar ceiling tile colliders.
+    // Four slabs leave a full U-shaped stairwell opening at x [-2.5, 2.5],
+    // z [4.5, 11.5] instead of sealing it with one broad ceiling collider.
     m_colliders.push_back(AABB::fromCenterHalfExtents(
-        glm::vec3(0.0F, 2.5F, 0.0F),
-        glm::vec3(static_cast<float>(MAP_HALF_WIDTH) + 0.5F, 0.05F,
-            static_cast<float>(MAP_HALF_DEPTH) + 0.5F)));
+        glm::vec3(-7.5F, 2.5F, 0.0F), glm::vec3(5.0F, 0.05F, 12.5F)));
+    m_colliders.push_back(AABB::fromCenterHalfExtents(
+        glm::vec3(7.5F, 2.5F, 0.0F), glm::vec3(5.0F, 0.05F, 12.5F)));
+    m_colliders.push_back(AABB::fromCenterHalfExtents(
+        glm::vec3(0.0F, 2.5F, -4.0F), glm::vec3(2.5F, 0.05F, 8.5F)));
+    m_colliders.push_back(AABB::fromCenterHalfExtents(
+        glm::vec3(0.0F, 2.5F, 12.0F), glm::vec3(2.5F, 0.05F, 0.5F)));
 
     // Floor: a grid of flat, wide cubes acting as floor tiles.
     for (int x = -MAP_HALF_WIDTH; x <= MAP_HALF_WIDTH; ++x)

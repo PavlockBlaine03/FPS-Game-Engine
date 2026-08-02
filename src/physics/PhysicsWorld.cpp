@@ -43,6 +43,7 @@ void PhysicsWorld::update(
 void PhysicsWorld::resolveCollisions(glm::vec3& position)
 {
     m_grounded = false;
+    constexpr float MAX_STEP_HEIGHT = 0.22F;
 
     // Resolve each overlapping collider by pushing the player out along
     // whichever axis has the *smallest* penetration depth (minimum
@@ -70,6 +71,20 @@ void PhysicsWorld::resolveCollisions(glm::vec3& position)
 
         const glm::vec3 colliderCenter = (collider.min + collider.max) * 0.5F;
         const glm::vec3 centerDelta = position - colliderCenter;
+        const float playerFeet = playerBox.min.y;
+        const float stepHeight = collider.max.y - playerFeet;
+
+        // Walk up short stair risers instead of treating every vertical face
+        // as a wall. Full-height walls and props remain horizontal blockers.
+        if (stepHeight > 0.0F && stepHeight <= MAX_STEP_HEIGHT
+            && m_velocity.y <= 0.0F
+            && (overlapX <= overlapY || overlapZ <= overlapY))
+        {
+            position.y += stepHeight + 0.001F;
+            m_velocity.y = 0.0F;
+            m_grounded = true;
+            continue;
+        }
 
         if (overlapX <= overlapY && overlapX <= overlapZ)
         {
