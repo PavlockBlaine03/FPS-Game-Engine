@@ -246,8 +246,6 @@ void RigidBodyWorld::moveNpcColliders(const std::vector<AABB>& colliders, const 
                 oldShapes[0]->setFlag(PxShapeFlag::eSIMULATION_SHAPE, false);
             body.setGlobalPose(PxTransform(PxVec3(
                 10000.0F + static_cast<float>(i) * 2.0F, 10000.0F, 10000.0F)));
-            body.setLinearVelocity(PxVec3(0.0F));
-            body.setAngularVelocity(PxVec3(0.0F));
             continue;
         }
         if (oldShapes[0] != nullptr)
