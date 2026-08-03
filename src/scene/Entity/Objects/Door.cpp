@@ -94,7 +94,7 @@ AABB Door::collider() const
     // axis-aligned box that fully encloses the rotated door at this angle.
     // This tracks the door's real position in every state (closed, open,
     // or mid-swing) rather than artificially blocking the doorway opening.
-    const float angleRadians = glm::radians(m_currentAngleDegrees - m_baseYawDegrees);
+    const float angleRadians = glm::radians(m_baseYawDegrees - m_currentAngleDegrees);
     const float cosAngle = std::cos(angleRadians);
     const float sinAngle = std::sin(angleRadians);
 

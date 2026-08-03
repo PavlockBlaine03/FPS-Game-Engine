@@ -14,6 +14,7 @@
 #include "scene/Scene.h"
 #include "scene/ParticleSystem.h"
 #include "scene/ProjectileManager.h"
+#include "scene/WorldBuilder/WorldBuilder.h"
 #include "scene/Entity/Weapons/Pistol.h"
 #include "scene/Entity/Objects/Door.h"
 #include "scene/Entity/Player/Hand.h"
@@ -55,6 +56,8 @@ private:
 	std::unique_ptr<Hand> m_hand;
 	std::shared_ptr<SkeletalModel> m_personModel;
 	std::vector<std::unique_ptr<Person>> m_persons;
+	std::unique_ptr<WorldBuilder> m_worldBuilder;
+	bool m_worldBuilderActive = false;
 
 	Light m_light;
 

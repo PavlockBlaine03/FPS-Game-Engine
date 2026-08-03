@@ -13,6 +13,12 @@ bool InputManager::isKeyPressed(const int key) const
     return glfwGetKey(m_window, key) == GLFW_PRESS;
 }
 
+bool InputManager::isKeyJustPressed(const int key) const
+{
+    return key >= 0 && key <= GLFW_KEY_LAST
+        && m_keyJustPressed[static_cast<std::size_t>(key)];
+}
+
 bool InputManager::isMouseButtonPressed(const int button) const
 {
     return glfwGetMouseButton(m_window, button) == GLFW_PRESS;
@@ -20,10 +26,8 @@ bool InputManager::isMouseButtonPressed(const int button) const
 
 bool InputManager::isMouseButtonJustPressed(const int button) const
 {
-    // Only the left button is tracked for "just pressed" edge-detection
-    // right now, since that's all firing needs; extend with per-button
-    // state if other buttons need this later.
-    return button == GLFW_MOUSE_BUTTON_LEFT && m_leftMouseJustPressed;
+    return button >= 0 && button <= GLFW_MOUSE_BUTTON_LAST
+        && m_mouseJustPressed[static_cast<std::size_t>(button)];
 }
 
 bool InputManager::isInteractKeyJustPressed() const
@@ -33,10 +37,26 @@ bool InputManager::isInteractKeyJustPressed() const
 
 void InputManager::update()
 {
-    const bool isLeftMousePressedNow = isMouseButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
-
-    m_leftMouseJustPressed = isLeftMousePressedNow && !m_leftMouseWasPressed;
-    m_leftMouseWasPressed = isLeftMousePressedNow;
+    constexpr int trackedKeys[] = {
+        GLFW_KEY_F1, GLFW_KEY_TAB, GLFW_KEY_G, GLFW_KEY_UP, GLFW_KEY_DOWN,
+        GLFW_KEY_ENTER, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN, GLFW_KEY_R,
+        GLFW_KEY_S, GLFW_KEY_L, GLFW_KEY_C, GLFW_KEY_T,
+        GLFW_KEY_LEFT_BRACKET, GLFW_KEY_RIGHT_BRACKET
+    };
+    for (const int key : trackedKeys)
+    {
+        const bool pressed = isKeyPressed(key);
+        m_keyJustPressed[static_cast<std::size_t>(key)] =
+            pressed && !m_keyWasPressed[static_cast<std::size_t>(key)];
+        m_keyWasPressed[static_cast<std::size_t>(key)] = pressed;
+    }
+    for (int button = 0; button <= GLFW_MOUSE_BUTTON_LAST; ++button)
+    {
+        const bool pressed = isMouseButtonPressed(button);
+        m_mouseJustPressed[static_cast<std::size_t>(button)] =
+            pressed && !m_mouseWasPressed[static_cast<std::size_t>(button)];
+        m_mouseWasPressed[static_cast<std::size_t>(button)] = pressed;
+    }
 
     const bool isInteractPressedNow = isKeyPressed(GLFW_KEY_E);
 

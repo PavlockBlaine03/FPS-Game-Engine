@@ -17,6 +17,12 @@ class Texture;
 class RigidBodyWorld
 {
 public:
+    struct WorldBuilderObject
+    {
+        glm::vec3 position{ 0.0F };
+        float scale = 1.0F;
+        bool sphere = false;
+    };
     struct RagdollPart
     {
         int nodeIndex = -1;
@@ -38,6 +44,7 @@ public:
     void spawnCubeStack(const glm::vec3& basePosition = glm::vec3(0.0F, -0.45F, 4.0F),
         int rows = 5);
     void spawnBlueBall(const glm::vec3& position = glm::vec3(3.0F, 0.8F, 4.0F));
+    void setWorldBuilderObjects(const std::vector<WorldBuilderObject>& objects);
     void movePlayerCollider(const glm::vec3& position,
         const glm::vec3& halfExtents, float deltaTime);
     void moveNpcColliders(const std::vector<AABB>& colliders, float deltaTime);

@@ -7,7 +7,6 @@
 
 #include <memory>
 
-class InputManager;
 class Camera;
 
 class Pistol : public Weapon
@@ -38,11 +37,6 @@ public:
 	[[nodiscard]] glm::vec3 muzzleWorldDirection(const Camera& camera) const;
 
 	[[nodiscard]] glm::mat4 viewTransform(const Camera& camera) const;
-
-	// Temporary debug helper: lets you tune scale/offset live without
-	// recompiling, since getting a downloaded model's scale/orientation
-	// right on the first try is mostly guesswork.
-	void debugAdjust(const InputManager& input, float deltaTime);
 
 private:
 	std::unique_ptr<Model> m_model;

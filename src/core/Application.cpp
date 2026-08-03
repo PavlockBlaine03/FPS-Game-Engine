@@ -146,6 +146,8 @@ Application::Application(const int width, const int height, const std::string& t
         std::cerr << "Animated person disabled: add a humanoid with Idle and Walk clips at "
                   << PERSON_MODEL_PATH << '\n';
     }
+
+    m_worldBuilder = std::make_unique<WorldBuilder>(m_personModel);
 }
 
 Application::~Application() = default;
@@ -168,9 +170,30 @@ void Application::processInput()
 {
     m_input->update();
 
+    if (m_input->isKeyJustPressed(GLFW_KEY_F1))
+    {
+        m_worldBuilderActive = !m_worldBuilderActive;
+        if (m_worldBuilderActive)
+            m_camera->setPosition(glm::vec3(8.0F, 6.0F, 8.0F));
+        else
+        {
+            m_worldBuilder->syncDynamicObjects(*m_rigidBodies);
+            m_camera->setPosition(m_bodyPosition + glm::vec3(0.0F, EYE_HEIGHT_OFFSET, 0.0F));
+        }
+        m_input->resetMouseDelta();
+        return;
+    }
+
     if (m_input->isKeyPressed(GLFW_KEY_ESCAPE))
     {
         glfwSetWindowShouldClose(m_window->handle(), GLFW_TRUE);
+    }
+
+    if (m_worldBuilderActive)
+    {
+        m_worldBuilder->update(*m_input, *m_camera, m_time.deltaTime());
+        m_input->resetMouseDelta();
+        return;
     }
 
     // Build a horizontal move direction from the camera's forward/right
@@ -206,14 +229,23 @@ void Application::processInput()
     // the door's collider only while it's fully closed. This is simpler
     // than trying to track a rotated collider mid-swing, and cheap enough
     // given the scene's collider count.
-    std::vector<AABB> colliders = m_scene->colliders();
+    const bool customWorld = m_worldBuilder->hasPieces();
+    std::vector<AABB> colliders = customWorld
+        ? m_worldBuilder->colliders()
+        : m_scene->colliders();
+    std::vector<std::unique_ptr<Door>>& activeDoors = customWorld
+        ? m_worldBuilder->doors()
+        : m_doors;
 
-    for (const std::unique_ptr<Door>& door : m_doors)
+    for (const std::unique_ptr<Door>& door : activeDoors)
         if (door->isBlocking()) colliders.push_back(door->collider());
     const std::vector<AABB> projectileColliders = colliders;
+    std::vector<std::unique_ptr<Person>>& activePersons = customWorld
+        ? m_worldBuilder->dummies()
+        : m_persons;
     std::vector<AABB> npcColliders;
-    npcColliders.reserve(m_persons.size());
-    for (const std::unique_ptr<Person>& person : m_persons) {
+    npcColliders.reserve(activePersons.size());
+    for (const std::unique_ptr<Person>& person : activePersons) {
         if (person != nullptr)
         {
             person->update(m_time.deltaTime(), *m_rigidBodies);
@@ -247,9 +279,7 @@ void Application::processInput()
 
     m_camera->processMouseMovement(m_input->mouseDeltaX(), m_input->mouseDeltaY());
     m_input->resetMouseDelta();
-    m_pistol->debugAdjust(*m_input, m_time.deltaTime());
     m_pistol->update(m_time.deltaTime());
-    m_hand->debugAdjust(*m_input, m_time.deltaTime());
     m_hand->update(m_time.deltaTime());
 
     // Fire on a fresh left-click (not held) -- spawns both a projectile and
@@ -275,7 +305,7 @@ void Application::processInput()
     {
         Door* nearestDoor = nullptr;
         float nearestDistance = DOOR_INTERACT_RANGE;
-        for (const std::unique_ptr<Door>& door : m_doors)
+        for (const std::unique_ptr<Door>& door : activeDoors)
         {
             const AABB doorBounds = door->collider();
             const glm::vec3 doorCenter = (doorBounds.min + doorBounds.max) * 0.5F;
@@ -300,18 +330,20 @@ void Application::processInput()
         }
     }
 
-    for (const std::unique_ptr<Door>& door : m_doors)
+    for (const std::unique_ptr<Door>& door : activeDoors)
         door->update(m_time.deltaTime());
 
     // Dynamic bodies use static room/door geometry, but not their own AABBs.
-    std::vector<AABB> rigidStatics = m_scene->colliders();
-    for (const std::unique_ptr<Door>& door : m_doors)
+    std::vector<AABB> rigidStatics = customWorld
+        ? m_worldBuilder->colliders()
+        : m_scene->colliders();
+    for (const std::unique_ptr<Door>& door : activeDoors)
         if (door->isBlocking()) rigidStatics.push_back(door->collider());
     m_rigidBodies->movePlayerCollider(
         m_bodyPosition, glm::vec3(0.3F, 0.9F, 0.3F), m_time.deltaTime());
     m_rigidBodies->moveNpcColliders(npcColliders, m_time.deltaTime());
     m_rigidBodies->update(m_time.deltaTime(), rigidStatics);
-    m_projectiles->update(m_time.deltaTime(), projectileColliders, m_persons,
+    m_projectiles->update(m_time.deltaTime(), projectileColliders, activePersons,
         *m_particles, *m_rigidBodies);
     m_particles->update(m_time.deltaTime());
 }
@@ -320,13 +352,32 @@ void Application::render() const
 {
     m_renderer->beginFrame();
 
-    m_scene->render(*m_renderer, *m_shader, *m_camera, m_light);
+    if (m_worldBuilderActive)
+    {
+        m_worldBuilder->renderWorld(*m_renderer, *m_shader, *m_skeletalShader,
+            *m_camera, m_light);
+        m_worldBuilder->renderUi(*m_textRenderer, *m_textShader, m_width, m_height);
+        m_textRenderer->renderCrosshair(*m_textShader, m_width, m_height,
+            0.5F, glm::vec3(1.0F, 0.75F, 0.15F));
+        return;
+    }
+
+    const bool customWorld = m_worldBuilder->hasPieces();
+    if (customWorld)
+        m_worldBuilder->renderPieces(*m_renderer, *m_shader, *m_skeletalShader,
+            *m_camera, m_light, false);
+    else
+        m_scene->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_rigidBodies->render(*m_renderer, *m_shader, *m_camera, m_light);
-    for (const std::unique_ptr<Door>& door : m_doors)
-        door->render(*m_renderer, *m_shader, *m_camera, m_light);
+    if (!customWorld)
+        for (const std::unique_ptr<Door>& door : m_doors)
+            door->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_projectiles->render(*m_renderer, *m_shader, *m_camera, m_light);
     m_particles->render(*m_renderer, *m_shader, *m_camera, m_light);
-    for (const std::unique_ptr<Person>& person : m_persons) {
+    const std::vector<std::unique_ptr<Person>>& renderedPersons = customWorld
+        ? m_worldBuilder->dummies()
+        : m_persons;
+    if (!customWorld) for (const std::unique_ptr<Person>& person : renderedPersons) {
         if (person != nullptr)
         {
             person->render(*m_renderer, *m_skeletalShader, *m_camera, m_light);
