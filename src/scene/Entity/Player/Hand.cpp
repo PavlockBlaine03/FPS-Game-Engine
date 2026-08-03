@@ -2,11 +2,9 @@
 #include "scene/Entity/Weapons/Pistol.h"
 #include "rendering/Renderer.h"
 #include "rendering/Camera.h"
-#include "input/InputManager.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <iostream>
 #include <stdexcept>
 
 namespace
@@ -68,37 +66,4 @@ void Hand::render(
 
     m_model->render(
         renderer, shader, camera, model, light, m_animator->skinMatrices());
-}
-
-void Hand::debugAdjust(const InputManager& input, const float deltaTime)
-{
-    const float scaleSpeed = 0.5F * deltaTime;
-    const float rotationSpeed = 0.5F * deltaTime;
-    const float moveSpeed = 0.05F * deltaTime;
-
-    // Bound to a distinct key set from Pistol::debugAdjust so both can be
-    // tuned independently without fighting over the same inputs.
-    if (input.isKeyPressed(GLFW_KEY_KP_7)) { m_gripScale *= (1.0F + scaleSpeed); }
-    if (input.isKeyPressed(GLFW_KEY_KP_1)) { m_gripScale *= (1.0F - scaleSpeed); }
-
-    if (input.isKeyPressed(GLFW_KEY_J)) { m_gripRotationDegrees.y += rotationSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_L)) { m_gripRotationDegrees.y -= rotationSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_I)) { m_gripRotationDegrees.x += rotationSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_K)) { m_gripRotationDegrees.x -= rotationSpeed; }
-
-    if (input.isKeyPressed(GLFW_KEY_T)) { m_gripOffset.y += moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_G)) { m_gripOffset.y -= moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_F)) { m_gripOffset.x -= moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_H)) { m_gripOffset.x += moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_R)) { m_gripOffset.z -= moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_Y)) { m_gripOffset.z += moveSpeed; }
-
-    if (input.isKeyPressed(GLFW_KEY_KP_5))
-    {
-        std::cout << "Hand scale=" << m_gripScale
-                   << " rotation=(" << m_gripRotationDegrees.x << ", "
-                   << m_gripRotationDegrees.y << ")\n"
-                   << "Offset=(" << m_gripOffset.x << ", "
-                   << m_gripOffset.y << ", " << m_gripOffset.z << ")\n";
-    }
 }

@@ -22,6 +22,8 @@ using namespace physx;
 namespace
 {
     constexpr float SHOT_IMPULSE = 8.5F;
+    constexpr std::uintptr_t BUILDER_BODY_TAG = std::uintptr_t{ 1 }
+        << (sizeof(std::uintptr_t) * 8U - 1U);
 
     PxVec3 toPhysX(const glm::vec3& value) { return PxVec3(value.x, value.y, value.z); }
     glm::vec3 toGlm(const PxVec3& value) { return glm::vec3(value.x, value.y, value.z); }
@@ -61,6 +63,9 @@ struct RigidBodyWorld::Impl
     std::vector<glm::vec3> visualScales;
     std::vector<bool> sphereVisuals;
     std::vector<bool> visualEnabled;
+    std::vector<PxRigidDynamic*> builderBodies;
+    std::vector<glm::vec3> builderVisualScales;
+    std::vector<bool> builderSphereVisuals;
     std::vector<PxRigidStatic*> staticBodies;
     std::vector<AABB> cachedStaticColliders;
     PxRigidDynamic* playerBody = nullptr;
@@ -109,11 +114,13 @@ struct RigidBodyWorld::Impl
             scene->removeActor(*playerBody);
             for (PxRigidDynamic* body : npcBodies) scene->removeActor(*body);
             for (PxRigidDynamic* body : dynamicBodies) scene->removeActor(*body);
+            for (PxRigidDynamic* body : builderBodies) scene->removeActor(*body);
             for (PxRigidStatic* body : staticBodies) scene->removeActor(*body);
         }
         if (playerBody != nullptr) playerBody->release();
         for (PxRigidDynamic* body : npcBodies) body->release();
         for (PxRigidDynamic* body : dynamicBodies) body->release();
+        for (PxRigidDynamic* body : builderBodies) body->release();
         for (PxRigidStatic* body : staticBodies) body->release();
         if (material != nullptr) material->release();
         if (scene != nullptr) scene->release();
@@ -215,6 +222,42 @@ void RigidBodyWorld::spawnBlueBall(const glm::vec3& position)
     body->setAngularDamping(0.04F);
 }
 
+void RigidBodyWorld::setWorldBuilderObjects(
+    const std::vector<WorldBuilderObject>& objects)
+{
+    for (PxRigidDynamic* body : m_impl->builderBodies)
+    {
+        m_impl->scene->removeActor(*body);
+        body->release();
+    }
+    m_impl->builderBodies.clear();
+    m_impl->builderVisualScales.clear();
+    m_impl->builderSphereVisuals.clear();
+
+    for (const WorldBuilderObject& object : objects)
+    {
+        const float scale = std::clamp(object.scale, 0.1F, 10.0F);
+        const float halfSize = scale * 0.5F;
+        const glm::vec3 center = object.position + glm::vec3(0.0F, halfSize, 0.0F);
+        PxRigidDynamic* body = m_impl->physics->createRigidDynamic(PxTransform(toPhysX(center)));
+        PxShape* shape = object.sphere
+            ? m_impl->physics->createShape(PxSphereGeometry(halfSize), *m_impl->material)
+            : m_impl->physics->createShape(PxBoxGeometry(halfSize, halfSize, halfSize), *m_impl->material);
+        body->attachShape(*shape);
+        shape->release();
+        PxRigidBodyExt::setMassAndUpdateInertia(*body,
+            std::max(0.1F, scale * scale * scale));
+        body->setLinearDamping(object.sphere ? 0.025F : 0.04F);
+        body->setAngularDamping(object.sphere ? 0.04F : 0.08F);
+        const std::size_t index = m_impl->builderBodies.size();
+        body->userData = reinterpret_cast<void*>(BUILDER_BODY_TAG | (index + 1U));
+        m_impl->scene->addActor(*body);
+        m_impl->builderBodies.push_back(body);
+        m_impl->builderVisualScales.push_back(glm::vec3(scale));
+        m_impl->builderSphereVisuals.push_back(object.sphere);
+    }
+}
+
 void RigidBodyWorld::moveNpcColliders(const std::vector<AABB>& colliders, const float deltaTime)
 {
     (void)deltaTime;
@@ -284,8 +327,13 @@ void RigidBodyWorld::update(const float deltaTime, const std::vector<AABB>& stat
 std::vector<AABB> RigidBodyWorld::colliders() const
 {
     std::vector<AABB> result;
-    result.reserve(m_impl->dynamicBodies.size());
+    result.reserve(m_impl->dynamicBodies.size() + m_impl->builderBodies.size());
     for (const PxRigidDynamic* body : m_impl->dynamicBodies)
+    {
+        const PxBounds3 bounds = body->getWorldBounds();
+        result.push_back(AABB{ toGlm(bounds.minimum), toGlm(bounds.maximum) });
+    }
+    for (const PxRigidDynamic* body : m_impl->builderBodies)
     {
         const PxBounds3 bounds = body->getWorldBounds();
         result.push_back(AABB{ toGlm(bounds.minimum), toGlm(bounds.maximum) });
@@ -307,13 +355,32 @@ bool RigidBodyWorld::raycast(const glm::vec3& start, const glm::vec3& end,
         || hit.block.actor == nullptr || hit.block.actor->userData == nullptr)
         return false;
     hitTime = hit.block.distance / distance;
-    bodyIndex = reinterpret_cast<std::uintptr_t>(hit.block.actor->userData) - 1U;
+    const std::uintptr_t encoded = reinterpret_cast<std::uintptr_t>(hit.block.actor->userData);
+    if ((encoded & BUILDER_BODY_TAG) != 0U)
+    {
+        const std::size_t index = (encoded & ~BUILDER_BODY_TAG) - 1U;
+        if (index >= m_impl->builderBodies.size()) return false;
+        bodyIndex = static_cast<std::size_t>(BUILDER_BODY_TAG) | index;
+        return true;
+    }
+    bodyIndex = encoded - 1U;
     return bodyIndex < m_impl->dynamicBodies.size();
 }
 
 void RigidBodyWorld::applyShot(const std::size_t bodyIndex, const glm::vec3& hitPoint,
     const glm::vec3& direction)
 {
+    if ((bodyIndex & static_cast<std::size_t>(BUILDER_BODY_TAG)) != 0U)
+    {
+        const std::size_t index = bodyIndex & ~static_cast<std::size_t>(BUILDER_BODY_TAG);
+        if (index >= m_impl->builderBodies.size()) return;
+        PxRigidDynamic& body = *m_impl->builderBodies[index];
+        body.wakeUp();
+        PxRigidBodyExt::addForceAtPos(body,
+            toPhysX(glm::normalize(direction) * SHOT_IMPULSE),
+            toPhysX(hitPoint), PxForceMode::eIMPULSE);
+        return;
+    }
     if (bodyIndex >= m_impl->dynamicBodies.size()) return;
     PxRigidDynamic& body = *m_impl->dynamicBodies[bodyIndex];
     body.wakeUp();
@@ -332,6 +399,14 @@ void RigidBodyWorld::render(const Renderer& renderer, const Shader& shader,
         const Mesh& mesh = m_impl->sphereVisuals[i] ? *m_sphereMesh : *m_mesh;
         const Texture& texture = m_impl->sphereVisuals[i] ? *m_blueTexture : *m_texture;
         renderer.draw(mesh, shader, camera, model, texture, light);
+    }
+    for (std::size_t i = 0; i < m_impl->builderBodies.size(); ++i)
+    {
+        glm::mat4 model = toGlm(m_impl->builderBodies[i]->getGlobalPose());
+        model = glm::scale(model, m_impl->builderVisualScales[i]);
+        const bool sphere = m_impl->builderSphereVisuals[i];
+        renderer.draw(sphere ? *m_sphereMesh : *m_mesh, shader, camera, model,
+            sphere ? *m_blueTexture : *m_texture, light);
     }
 }
 

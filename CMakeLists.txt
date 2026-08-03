@@ -56,6 +56,8 @@ add_executable(FPSGame
     src/util/SkeletalModelLoader.cpp
     src/scene/Scene.h
     src/scene/Scene.cpp
+    src/scene/WorldBuilder/WorldBuilder.h
+    src/scene/WorldBuilder/WorldBuilder.cpp
     src/scene/WorldGenerator.h
     src/scene/Entity/Entity.h
     src/scene/Entity/Entity.cpp
@@ -89,6 +91,10 @@ target_include_directories(FPSGame
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${Stb_INCLUDE_DIR}
+)
+
+target_compile_definitions(FPSGame PRIVATE
+    FPSGAME_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 target_link_libraries(FPSGame

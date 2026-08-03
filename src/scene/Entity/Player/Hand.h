@@ -11,7 +11,6 @@ class Camera;
 class Pistol;
 class Renderer;
 class Shader;
-class InputManager;
 struct Light;
 
 class Hand
@@ -28,10 +27,6 @@ public:
 		const Camera& camera,
 		const Light& light,
 		const Pistol& pistol) const;
-
-	// Temporary debug helper, mirroring Pistol::debugAdjust, so the grip
-	// offset/rotation/scale can be tuned live instead of guessed blindly.
-	void debugAdjust(const InputManager& input, float deltaTime);
 
 private:
 	std::unique_ptr<SkeletalModel> m_model;

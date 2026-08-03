@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GLFW/glfw3.h>
+#include <array>
 
 class InputManager
 {
@@ -8,6 +9,7 @@ public:
 	explicit InputManager(GLFWwindow* window);
 
 	[[nodiscard]] bool isKeyPressed(const int key) const;
+	[[nodiscard]] bool isKeyJustPressed(int key) const;
 	[[nodiscard]] bool isMouseButtonPressed(int button) const;
 
 	// True only on the frame the button transitions from released to
@@ -42,8 +44,10 @@ private:
 	float m_mouseDeltaY = 0.0f;
 	bool m_firstMouse = true;
 
-	bool m_leftMouseWasPressed = false;
-	bool m_leftMouseJustPressed = false;
+	std::array<bool, GLFW_KEY_LAST + 1> m_keyWasPressed{};
+	std::array<bool, GLFW_KEY_LAST + 1> m_keyJustPressed{};
+	std::array<bool, GLFW_MOUSE_BUTTON_LAST + 1> m_mouseWasPressed{};
+	std::array<bool, GLFW_MOUSE_BUTTON_LAST + 1> m_mouseJustPressed{};
 
 	bool m_interactKeyWasPressed = false;
 	bool m_interactKeyJustPressed = false;

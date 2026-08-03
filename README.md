@@ -8,12 +8,15 @@ FPSGAME is a small first-person shooter project written in C++20 with OpenGL 3.3
 - Textured room geometry, lighting, and an interactive swinging door
 - Pistol viewmodel, recoil, muzzle effects, projectiles, impact particles, and audio
 - Swept projectile collision to prevent tunneling through thin walls
+- NVIDIA PhysX rigid-body simulation for shootable cubes, spheres, and humanoid ragdolls
+- Jointed `Person` ragdolls that inherit bullet impact and continue reacting to gravity and collision
 - Static FBX, OBJ, glTF, and other Assimp-supported model loading
 - Skeletal glTF/GLB loading with up to four bone influences per vertex
 - CPU animation sampling, quaternion interpolation, and animation crossfading
 - GPU skinning using an OpenGL texture-buffer bone palette
 - A `Person` NPC that blends between idle and walk animations while patrolling
-- An animation pose interface intended to support custom ragdoll physics later
+- A dedicated Blender-style World Builder with an axis grid, free-fly camera, snapping, previews, and persistent layouts
+- Placeable floors, wall variants, textured materials, stairs, hinged doors, dynamic props, and dummies
 
 ## Requirements
 
@@ -27,7 +30,7 @@ The supplied build presets currently target Windows.
 - [vcpkg](https://github.com/microsoft/vcpkg) installed at `C:\vcpkg`
 - A GPU and driver supporting OpenGL 3.3
 
-The dependency manifest installs GLFW, GLM, FreeType, stb, Assimp, miniaudio, and glad automatically through vcpkg.
+The dependency manifest installs GLFW, GLM, FreeType, stb, Assimp, miniaudio, glad, and NVIDIA PhysX automatically through vcpkg.
 
 ## Installation
 
@@ -96,9 +99,50 @@ cd out\build\windows-release
 | `Space` | Jump |
 | Left mouse button | Fire pistol |
 | `E` | Interact with a nearby door |
+| `F1` | Enter or leave the World Builder |
 | `Escape` | Exit |
 
-The project also contains temporary developer controls for adjusting the pistol and hand transforms. These are tuning tools and may change without notice.
+Weapon and hand transform debug controls are disabled; gameplay input no longer changes their tuned viewmodel transforms.
+
+### World Builder controls
+
+World Builder runs in a dedicated neutral workspace instead of overlaying tools on the playable environment. A non-empty builder layout becomes the playable world when build mode is exited.
+
+| Input | Action |
+| --- | --- |
+| `F1` | Enter the builder or return to gameplay |
+| `W`, `A`, `S`, `D` | Move the editor camera |
+| `Q`, `E` | Move the editor camera down/up |
+| Mouse | Look around |
+| `Tab` | Open or close the piece library |
+| Up/Down arrows | Navigate the piece library |
+| `Enter` | Select the highlighted piece |
+| Left mouse button | Place the previewed piece |
+| Right mouse button | Remove the nearest piece at the preview position |
+| `G` | Toggle 0.5-unit Grid Snap and Free placement |
+| `Page Up`, `Page Down` | Raise or lower the placement plane |
+| `R` | Rotate the placement preview |
+| `C` | Cycle Solid, Door Frame, and Window wall types |
+| `T` | Cycle available Floor or Wall materials |
+| `[`, `]` | Decrease or increase Cube/Sphere scale |
+| `Ctrl+S` | Save the editor world |
+| `Ctrl+L` | Load the editor world |
+
+The piece library is organized into:
+
+- **Architecture:** Floor, Wall, Stairs, Door
+- **Objects:** Cube, Sphere
+- **Entities:** Dummy
+
+Placed doors fit the one-unit Door Frame opening and remain interactive in gameplay. Builder cubes and spheres become dynamic PhysX bodies after leaving build mode, so they fall, collide, roll, and react to bullets. Object scale affects the preview, rendered mesh, collision geometry, mass, and saved layout.
+
+Worlds are stored in the stable project-relative location:
+
+```text
+worlds/editor_world.world
+```
+
+The save file is versioned. Current saves use format version 4, and earlier supported versions are upgraded while loading.
 
 ## Animated person asset
 
@@ -128,9 +172,10 @@ When exporting from Blender, enable skinning and animations, include deform bone
 src/
   core/          Application loop, window, and timing
   input/         Keyboard and mouse input
-  physics/       AABB-based player and world collision
+  physics/       Player/world collision and NVIDIA PhysX rigid-body/ragdoll simulation
   rendering/     Shaders, meshes, textures, models, and skinning
-  scene/         World, entities, animation, particles, and projectiles
+  scene/         World, entities, animation, particles, projectiles, and World Builder
+    WorldBuilder/ Dedicated editor state, library, placement, rendering, and persistence
   audio/         Audio playback
   util/          Asset and model loading helpers
   assets/        Models, textures, shaders, fonts, and audio
@@ -182,4 +227,4 @@ Contributions are welcome. Before starting a large feature, open an issue or dis
 
 ## Roadmap
 
-Likely future work includes a higher-detail humanoid, custom rigid-body and joint-based ragdolls, projectile reactions, animation-to-ragdoll pose transfer, improved character collision, enemy behavior, and automated animation/loader tests.
+Likely future work includes a higher-detail humanoid, more World Builder pieces and materials, selectable/editable placed objects, multiple named world files, improved character collision, enemy behavior, and automated physics/editor tests.

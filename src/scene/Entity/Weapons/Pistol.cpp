@@ -1,11 +1,8 @@
 #include "scene/Entity/Weapons/Pistol.h"
 #include "rendering/Renderer.h"
 #include "rendering/Camera.h"
-#include "input/InputManager.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-
-#include <iostream>
 
 namespace
 {
@@ -46,35 +43,6 @@ glm::vec3 Pistol::muzzleWorldDirection(const Camera& camera) const
     // Bullets fire straight down the camera's look direction; the muzzle
     // position is just where they visually originate from.
     return camera.front();
-}
-void Pistol::debugAdjust(const InputManager& input, const float deltaTime)
-{
-    const float scaleSpeed = 0.5F * deltaTime;
-    const float rotationSpeed = 90.0F * deltaTime;
-    const float moveSpeed = 0.5f * deltaTime;
-
-    if (input.isKeyPressed(GLFW_KEY_KP_ADD)) { m_viewScale *= (1.0F + scaleSpeed); }
-    if (input.isKeyPressed(GLFW_KEY_KP_SUBTRACT)) { m_viewScale *= (1.0F - scaleSpeed); }
-
-    if (input.isKeyPressed(GLFW_KEY_KP_4)) { m_viewRotationDegrees.y += rotationSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_KP_6)) { m_viewRotationDegrees.y -= rotationSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_KP_8)) { m_viewRotationDegrees.x += rotationSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_KP_2)) { m_viewRotationDegrees.x -= rotationSpeed; }
-
-    if (input.isKeyPressed(GLFW_KEY_UP))    { m_viewOffset.y += moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_DOWN))  { m_viewOffset.y -= moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_LEFT))  { m_viewOffset.x -= moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_RIGHT)) { m_viewOffset.x += moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_KP_9))  { m_viewOffset.z -= moveSpeed; }
-    if (input.isKeyPressed(GLFW_KEY_KP_3))  { m_viewOffset.z += moveSpeed; }
-
-    if (input.isKeyPressed(GLFW_KEY_KP_5))
-    {
-        std::cout << "Pistol scale=" << m_viewScale
-                   << " rotation=(" << m_viewRotationDegrees.x << ", "
-                   << m_viewRotationDegrees.y << ")\n" 
-                   << "Position= " << m_viewOffset.x << ", " << m_viewOffset.y << ", " << m_viewOffset.z <<"\n";
-    }
 }
 void Pistol::triggerRecoil()
 {
